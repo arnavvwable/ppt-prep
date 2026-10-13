@@ -1,0 +1,3277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Transfer Under Clark-Wilson — Interactive Demo</title>
+<meta name="description" content="Interactive teaching demo walking through a bank transfer under the Clark-Wilson integrity model, demonstrating well-formed transactions, separation of duty, audit trails, and validated inputs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<noscript><style>body::before{content:"This demo needs JavaScript.";display:block;padding:2rem;font-size:1.25rem;text-align:center;color:#B3412B;}</style></noscript>
+<style>
+/* ── CSS Custom Properties ── */
+:root {
+  --paper: #F5F3EE;
+  --surface: #FFFFFF;
+  --ink: #1B1B18;
+  --ink-2: #5E5B53;
+  --rule: #D9D5CA;
+  --accent: #1F5F54;
+  --accent-light: #e6f0ed;
+  --deny: #B3412B;
+  --deny-light: #fceae6;
+  --standing: #7A7560;
+  --standing-light: #f0ede4;
+  --font-serif: 'Source Serif 4', 'Iowan Old Style', Palatino, Georgia, serif;
+  --font-sans: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --shadow-overlay: 0 4px 24px rgba(27,27,24,0.12);
+  --radius: 4px;
+  --header-h: 56px;
+  --scenbar-h: 44px;
+  --caption-h: 90px;
+  --footer-h: 28px;
+  --rulestrip-h: 64px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typography ── */
+.serif { font-family: var(--font-serif); }
+.mono { font-family: var(--font-mono); font-feature-settings: 'tnum' 1; }
+.ink-2 { color: var(--ink-2); }
+
+/* ── Layout Shell ── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.header {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+  gap: 12px;
+}
+.header-title {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.header-subtitle {
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin-left: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Buttons ── */
+button {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+button:hover { background: var(--rule); }
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+button.primary:hover { background: #174a41; }
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button.small {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+}
+
+/* ── Scenario Bar ── */
+.scenbar {
+  height: var(--scenbar-h);
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+  overflow-x: auto;
+  padding: 0 24px;
+  gap: 0;
+}
+.scenbar-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.scenbar-group-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  padding-right: 8px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.scenbar-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: none;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.scenbar-tab:hover { color: var(--ink); }
+.scenbar-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.scenbar-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.scenbar-sep {
+  width: 1px;
+  background: var(--rule);
+  margin: 8px 12px;
+  flex-shrink: 0;
+}
+
+/* ── Caption Band ── */
+.caption-band {
+  padding: 12px 24px 10px;
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+  min-height: 70px;
+}
+.caption-plain {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.caption-model {
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.6;
+}
+
+/* ── Rule Chips ── */
+.rule-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-2);
+  line-height: 1.5;
+  cursor: default;
+  white-space: nowrap;
+}
+.rule-chip.pass {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.rule-chip.fail, .rule-chip.denied {
+  background: var(--deny-light);
+  border-color: var(--deny);
+  color: var(--deny);
+}
+.rule-chip.standing {
+  border-style: dotted;
+  border-color: var(--standing);
+  color: var(--standing);
+}
+.rule-chip.info {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Main Area ── */
+.main-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+.col-left {
+  width: 26%;
+  min-width: 240px;
+  padding: 16px 20px;
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.col-center {
+  flex: 1;
+  min-width: 300px;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+.col-right {
+  width: 30%;
+  min-width: 260px;
+  background: var(--surface);
+  padding: 16px 20px;
+  border-left: 1px solid var(--rule);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* ── Presenter Panel ── */
+.col-right.with-presenter {
+  width: 22%;
+  min-width: 200px;
+}
+.presenter-panel {
+  width: 340px;
+  background: var(--surface);
+  border-left: 1px solid var(--rule);
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  display: none;
+}
+.presenter-panel.open { display: block; }
+.presenter-panel h3 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+.presenter-panel h3:first-child { margin-top: 0; }
+.presenter-panel p, .presenter-panel .pres-content {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  margin-bottom: 6px;
+}
+.presenter-timer {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.presenter-timer .target { color: var(--ink-2); font-size: 0.82rem; }
+
+/* ── Section Labels ── */
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Actor Card ── */
+.actor-card {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 12px;
+}
+.actor-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.actor-role { font-size: 0.82rem; color: var(--ink-2); }
+.actor-auth {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+.actor-auth.pass { color: var(--accent); }
+.actor-auth.pending { color: var(--ink-2); }
+
+/* ── Access Triple ── */
+.triple-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.triple-slot {
+  flex: 1;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  min-height: 52px;
+}
+.triple-slot-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  margin-bottom: 3px;
+}
+.triple-slot-value {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+.triple-slot-value.denied {
+  color: var(--deny);
+}
+.triple-slot-value.pass {
+  color: var(--accent);
+}
+
+/* ── Request Form (UDI) ── */
+.udi-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+.udi-form label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 2px;
+  margin-top: 8px;
+}
+.udi-form label:first-child { margin-top: 0; }
+.udi-form input, .udi-form select {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.udi-form input:focus, .udi-form select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.udi-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.udi-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.udi-presets button {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+}
+.validation-msg {
+  font-size: 0.78rem;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+.validation-msg.error {
+  color: var(--deny);
+  background: var(--deny-light);
+}
+.validation-msg.ok {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* ── Stage Rail ── */
+.stage-rail {
+  position: relative;
+}
+.stage-row {
+  position: relative;
+  padding: 10px 14px 10px 36px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+.stage-row::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--rule);
+}
+.stage-row:first-child::before { top: 50%; }
+.stage-row:last-child::before { bottom: 50%; }
+.stage-marker {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--rule);
+  background: var(--paper);
+  z-index: 1;
+}
+.stage-row.active .stage-marker {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.stage-row.pass .stage-marker {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.stage-row.fail .stage-marker {
+  border-color: var(--deny);
+  background: var(--deny);
+}
+.stage-row.notreached .stage-marker {
+  border-style: dashed;
+}
+.stage-row.notreached {
+  opacity: 0.5;
+}
+.stage-row.notreached::before {
+  border-left: 2px dashed var(--rule);
+  background: none;
+  width: 0;
+}
+.stage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.stage-status-word {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.stage-status-word.pass { color: var(--accent); background: var(--accent-light); }
+.stage-status-word.fail { color: var(--deny); background: var(--deny-light); }
+.stage-status-word.notreached { color: var(--ink-2); }
+.stage-status-word.active { color: var(--accent); }
+.stage-status-word.standing { color: var(--standing); }
+
+/* ── Stage Checks ── */
+.stage-checks {
+  margin-top: 8px;
+  padding-left: 2px;
+}
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.check-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+.check-label { font-weight: 500; }
+.check-detail { color: var(--ink-2); font-size: 0.78rem; }
+
+/* ── Result Banner ── */
+.result-banner {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  font-weight: 500;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.result-banner.success {
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.result-banner.blocked {
+  background: var(--deny-light);
+  color: var(--deny);
+  border: 1px solid var(--deny);
+}
+.result-detail {
+  font-size: 0.82rem;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+/* ── Recap Frame ── */
+.recap-list {
+  list-style: none;
+  margin-top: 12px;
+}
+.recap-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.88rem;
+}
+.recap-list li:last-child { border-bottom: none; }
+.recap-list .recap-title {
+  font-weight: 600;
+  color: var(--accent);
+}
+.recap-list .recap-desc {
+  color: var(--ink-2);
+  font-size: 0.82rem;
+}
+
+/* ── Data Panel ── */
+.data-section {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.data-section:last-child { border-bottom: none; }
+.data-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 0.88rem;
+}
+.balance-amount {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.balance-amount.changed {
+  animation: highlightChange 0.6s ease-out;
+}
+@keyframes highlightChange {
+  0% { background: #fffde0; }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes highlightChange {
+    0%, 100% { background: transparent; }
+  }
+}
+.pending-item, .ledger-item {
+  font-size: 0.82rem;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.pending-item:last-child, .ledger-item:last-child { border-bottom: none; }
+.log-area {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  min-height: 40px;
+}
+.log-entry {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry.security { color: var(--deny); }
+.log-empty {
+  color: var(--ink-2);
+  font-style: italic;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+}
+.log-label-note {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  color: var(--ink-2);
+  font-style: italic;
+  margin-top: 2px;
+}
+.ivp-result {
+  font-size: 0.82rem;
+  padding: 8px 0;
+}
+.ivp-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+.ivp-status {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.ivp-status.pass { color: var(--accent); }
+.ivp-status.fail { color: var(--deny); }
+.ivp-status.na { color: var(--ink-2); }
+
+/* ── Rule Strip ── */
+.rule-strip {
+  height: var(--rulestrip-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-top: 1px solid var(--rule);
+  padding: 0 24px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.rule-strip-chip {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.rule-strip-chip:hover, .rule-strip-chip:focus-visible {
+  background: var(--surface);
+}
+.rule-strip-chip.pass {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.rule-strip-chip.denied {
+  border-color: var(--deny);
+  background: var(--deny-light);
+  color: var(--deny);
+}
+.rule-strip-chip.standing {
+  border-style: dotted;
+  border-color: var(--standing);
+  color: var(--standing);
+}
+.rule-strip-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-overlay);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink);
+  text-align: left;
+  z-index: 20;
+  pointer-events: none;
+}
+.rule-strip-chip:hover .rule-strip-tooltip,
+.rule-strip-chip:focus .rule-strip-tooltip {
+  display: block;
+}
+.rule-strip-tooltip strong { display: block; margin-bottom: 3px; }
+.rule-strip-tooltip .formal { color: var(--ink-2); font-size: 0.72rem; margin-top: 4px; }
+
+/* ── Footer ── */
+.footer {
+  height: var(--footer-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.68rem;
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+
+/* ── Overlays ── */
+.overlay-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(27,27,24,0.3);
+  z-index: 100;
+}
+.overlay-backdrop.open { display: flex; align-items: center; justify-content: center; }
+.overlay-panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-overlay);
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px 32px;
+  position: relative;
+}
+.overlay-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--ink-2);
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+.overlay-close:hover { background: var(--rule); }
+.overlay-close:focus-visible { outline: 2px solid var(--accent); }
+.overlay-title {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.overlay-group-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 18px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.overlay-rule, .overlay-term {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.overlay-rule:last-child, .overlay-term:last-child { border-bottom: none; }
+.overlay-rule-id {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+.overlay-rule-label {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.overlay-rule-plain {
+  font-size: 0.85rem;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.overlay-rule-formal {
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin-top: 2px;
+  font-style: italic;
+}
+.overlay-note {
+  margin-top: 20px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+/* ── Shortcut Help ── */
+.shortcut-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  font-size: 0.85rem;
+}
+.shortcut-key {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  background: var(--paper);
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  text-align: center;
+}
+
+/* ── Toggle ── */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--paper);
+  border-radius: var(--radius);
+  border: 1px solid var(--rule);
+  font-size: 0.82rem;
+}
+.toggle-switch {
+  width: 38px;
+  height: 20px;
+  background: var(--rule);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  border: none;
+  padding: 0;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--surface);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch.on {
+  background: var(--deny);
+}
+.toggle-switch.on::after {
+  transform: translateX(18px);
+}
+.toggle-result {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.toggle-result.failed {
+  background: var(--deny-light);
+  color: var(--deny);
+  border: 1px solid var(--deny);
+}
+.hypothetical-line {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fffde0;
+  border: 1px dashed var(--standing);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.hypothetical-line strong { color: var(--ink); }
+
+/* ── Selftest ── */
+.selftest-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  padding: 10px 24px;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  text-align: center;
+}
+.selftest-banner.pass { background: var(--accent-light); color: var(--accent); }
+.selftest-banner.fail { background: var(--deny-light); color: var(--deny); }
+
+/* ── Simulation disclaimer ── */
+.sim-disclaimer {
+  font-size: 0.68rem;
+  color: var(--ink-2);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1279px) {
+  .main-area {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .col-left {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+    min-width: 0;
+  }
+  .col-center {
+    width: 100%;
+    min-width: 0;
+  }
+  .col-right {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--rule);
+    min-width: 0;
+  }
+  .presenter-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--rule);
+  }
+}
+@media (max-width: 899px) {
+  .header { padding: 0 12px; gap: 6px; }
+  .header-subtitle { display: none; }
+  .header-title { font-size: 1rem; }
+  .scenbar { padding: 0 12px; }
+  .scenbar-tab { padding: 0 10px; font-size: 0.75rem; }
+  .caption-band { padding: 10px 12px; }
+  .caption-plain { font-size: 1.1rem; }
+  .col-left, .col-center, .col-right { padding: 12px; }
+  .footer { padding: 0 12px; flex-wrap: wrap; justify-content: center; text-align: center; gap: 4px; }
+  .rule-strip { padding: 8px 12px; gap: 4px; height: auto; min-height: var(--rulestrip-h); }
+  .triple-row { flex-direction: column; }
+}
+
+/* ── Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Legend ── */
+.icon-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--ink-2);
+}
+.legend-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Deny note (once per scenario) */
+.deny-logging-note {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  font-style: italic;
+  padding: 6px 0;
+  border-top: 1px solid var(--rule);
+  margin-top: 8px;
+}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <header class="header" role="banner">
+    <div style="display:flex;align-items:baseline;min-width:0;">
+      <span class="header-title">A Transfer Under Clark-Wilson</span>
+      <span class="header-subtitle">Integrity through well-formed transactions and separation of duty</span>
+    </div>
+    <nav class="header-controls" aria-label="Demo controls">
+      <button id="btn-back" aria-label="Previous step" title="Back (←)">Back</button>
+      <span id="step-counter" class="mono" style="font-size:0.82rem;color:var(--ink-2);min-width:90px;text-align:center;"></span>
+      <button id="btn-next" class="primary" aria-label="Next step" title="Next (→)">Next</button>
+      <button id="btn-reset" title="Reset scenario (R)">Reset</button>
+      <button id="btn-presenter" title="Presenter panel (P)">Presenter</button>
+      <button id="btn-glossary" title="Glossary (G)">Glossary</button>
+      <button id="btn-rules" title="Rules (L)">Rules</button>
+    </nav>
+  </header>
+
+  <!-- Scenario Bar -->
+  <nav class="scenbar" aria-label="Scenarios">
+    <div class="scenbar-group">
+      <span class="scenbar-group-label">How it works</span>
+      <button class="scenbar-tab active" data-scenario="1">1 Normal transfer</button>
+    </div>
+    <div class="scenbar-sep" aria-hidden="true"></div>
+    <div class="scenbar-group">
+      <span class="scenbar-group-label">Try to break it</span>
+      <button class="scenbar-tab" data-scenario="2">2 Edit the ledger</button>
+      <button class="scenbar-tab" data-scenario="3">3 Wrong person</button>
+      <button class="scenbar-tab" data-scenario="4">4 Approve your own</button>
+      <button class="scenbar-tab" data-scenario="5">5 Bad input</button>
+    </div>
+  </nav>
+
+  <!-- Caption Band -->
+  <div class="caption-band" aria-live="polite">
+    <div id="caption-plain" class="caption-plain"></div>
+    <div id="caption-model" class="caption-model"></div>
+  </div>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <div class="col-left" id="col-left"></div>
+    <div class="col-center" id="col-center"></div>
+    <div class="col-right" id="col-right"></div>
+    <div class="presenter-panel" id="presenter-panel"></div>
+  </div>
+
+  <!-- Rule Strip -->
+  <div class="rule-strip" id="rule-strip" role="group" aria-label="Clark-Wilson rules"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>Sanjivani University · Department of Cyber Security, SET · Group 3 · Unit V</span>
+    <span class="sim-disclaimer">Simulation of the model's rules in a toy bank. Not real banking software.</span>
+  </footer>
+</div>
+
+<!-- Glossary Overlay -->
+<div class="overlay-backdrop" id="overlay-glossary" role="dialog" aria-label="Glossary" aria-modal="true">
+  <div class="overlay-panel" id="glossary-panel">
+    <button class="overlay-close" aria-label="Close glossary">&times;</button>
+    <h2 class="overlay-title">Glossary</h2>
+    <div id="glossary-content"></div>
+  </div>
+</div>
+
+<!-- Rules Overlay -->
+<div class="overlay-backdrop" id="overlay-rules" role="dialog" aria-label="Rules" aria-modal="true">
+  <div class="overlay-panel" id="rules-panel">
+    <button class="overlay-close" aria-label="Close rules">&times;</button>
+    <h2 class="overlay-title">The Nine Rules of Clark-Wilson (1987)</h2>
+    <div id="rules-content"></div>
+  </div>
+</div>
+
+<!-- Shortcuts Overlay -->
+<div class="overlay-backdrop" id="overlay-shortcuts" role="dialog" aria-label="Keyboard shortcuts" aria-modal="true">
+  <div class="overlay-panel" style="max-width:440px;">
+    <button class="overlay-close" aria-label="Close shortcuts">&times;</button>
+    <h2 class="overlay-title">Keyboard Shortcuts</h2>
+    <div class="shortcut-list">
+      <span class="shortcut-key">→</span><span>Next step</span>
+      <span class="shortcut-key">←</span><span>Previous step</span>
+      <span class="shortcut-key">Space</span><span>Next step</span>
+      <span class="shortcut-key">Enter</span><span>Next step</span>
+      <span class="shortcut-key">Backspace</span><span>Previous step</span>
+      <span class="shortcut-key">R</span><span>Reset scenario</span>
+      <span class="shortcut-key">1-5</span><span>Choose scenario</span>
+      <span class="shortcut-key">P</span><span>Presenter panel</span>
+      <span class="shortcut-key">G</span><span>Glossary</span>
+      <span class="shortcut-key">L</span><span>Rules</span>
+      <span class="shortcut-key">?</span><span>This help</span>
+      <span class="shortcut-key">Esc</span><span>Close overlay</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================================================
+// 1. DATA
+// =============================================================================
+
+var INR = (function() {
+  try {
+    var f = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+    return function(n) { return f.format(n); };
+  } catch(e) {
+    return function(n) { return '\u20B9' + String(n); };
+  }
+})();
+
+var USERS = {
+  asha:  { id: 'asha',  name: 'Asha Patil',     role: 'Clerk' },
+  ravi:  { id: 'ravi',  name: 'Ravi Deshmukh',   role: 'Supervisor' },
+  meera: { id: 'meera', name: 'Meera Joshi',     role: 'Auditor' },
+  neha:  { id: 'neha',  name: 'Neha Kale',       role: 'Security Officer / Certifier' }
+};
+
+var INITIAL_BALANCES = { 'ACC-1001': 50000, 'ACC-1002': 20000 };
+var INVARIANT_TOTAL = 70000;
+var TRANSFER_LIMIT = 25000;
+var VALID_ACCOUNTS = ['ACC-1001', 'ACC-1002'];
+
+// TPs
+var TPS = {
+  TP1: { id: 'TP1', name: 'Initiate Transfer', cdis: ['PENDING'], logAppend: true },
+  TP2: { id: 'TP2', name: 'Approve and Post Transfer', cdis: ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING'], logAppend: true }
+};
+
+// E1: certified relations (TP -> CDIs it is certified for)
+var E1_RELATIONS = {
+  TP1: ['PENDING'],
+  TP2: ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING']
+};
+
+// E2: (user, TP, CDIs) access triples
+var E2_RELATIONS = [
+  { user: 'asha', tp: 'TP1', cdis: ['PENDING'] },
+  { user: 'ravi', tp: 'TP2', cdis: ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING'] }
+];
+// Meera: no TP relations. Neha: no TP relations (E4).
+
+// Nine rules
+var RULES = [
+  { id: 'C1', type: 'Certification', label: 'IVP validity', plain: 'IVPs must confirm that all important data items are in a valid state when they run.', formal: 'Integrity Verification Procedures (IVPs) must confirm that all CDIs are in a valid state when they run.' },
+  { id: 'C2', type: 'Certification', label: 'TP certification', plain: 'Each program is certified to take data from one valid state to another, and is tied to the specific data it handles.', formal: 'Every Transformation Procedure (TP) is certified to take CDIs from one valid state to another valid state, and is tied to the specific CDIs it is certified to handle.' },
+  { id: 'C3', type: 'Certification', label: 'Separation of duty', plain: 'The permission list must be certified to ensure no one person can do both halves of a critical action.', formal: 'The list of (user, TP, CDI) relations must be certified to meet the separation-of-duty requirement.' },
+  { id: 'C4', type: 'Certification', label: 'Audit logging', plain: 'Every program is certified to write enough to an append-only log to reconstruct what it did.', formal: 'Every TP is certified to append enough information to an append-only log to reconstruct what it did.' },
+  { id: 'C5', type: 'Certification', label: 'Input validation', plain: 'Any program that takes outside input must be certified to handle every possible value: reject it or turn it into valid data.', formal: 'Any TP that takes a UDI as input must be certified to handle every possible value of it: reject it, or turn it into a valid CDI.' },
+  { id: 'E1', type: 'Enforcement', label: 'CDI manipulation', plain: 'The system ensures only certified programs touch important data.', formal: 'The system keeps the certified relations and ensures only TPs certified for a CDI manipulate that CDI.' },
+  { id: 'E2', type: 'Enforcement', label: 'Access triples', plain: 'The system checks the user-program-data triple before allowing any action.', formal: 'The system keeps (user, TP, CDIs) triples and allows only the executions those triples describe.' },
+  { id: 'E3', type: 'Enforcement', label: 'Authentication', plain: 'The system must verify who the user is before letting them run any program.', formal: 'The system must authenticate every user trying to run a TP.' },
+  { id: 'E4', type: 'Enforcement', label: 'Certifier separation', plain: 'Only the certifier may change the rules, and the certifier may not run the programs they certify.', formal: 'Only the agent permitted to certify may change those lists, and that agent may not have execute rights over what they certify.' }
+];
+
+var RULES_MAP = {};
+RULES.forEach(function(r) { RULES_MAP[r.id] = r; });
+
+// Glossary
+var GLOSSARY = [
+  { term: 'CDI', full: 'Constrained Data Item', plain: 'Important data that must stay accurate — the bank accounts, the ledger, the pending queue.', example: 'ACC-1001 (₹50,000 balance), the LEDGER, the PENDING queue.' },
+  { term: 'UDI', full: 'Unconstrained Data Item', plain: 'Outside input that has not been validated yet — whatever a user types in.', example: 'The typed transfer request: from ACC-1001 to ACC-1002, amount "5000".' },
+  { term: 'TP', full: 'Transformation Procedure', plain: 'A certified program that is the only way to change important data.', example: 'TP1 "Initiate Transfer" and TP2 "Approve and Post Transfer".' },
+  { term: 'IVP', full: 'Integrity Verification Procedure', plain: 'A check that runs after changes to confirm the data is still consistent.', example: 'Ledger Balance Check: do all account balances still sum to ₹70,000?' },
+  { term: 'Access Triple', full: '(User, TP, CDI) relation', plain: 'A binding that says which user may run which program on which data.', example: '(Asha, TP1, PENDING) — Asha may initiate transfers.' },
+  { term: 'Well-Formed Transaction', full: '', plain: 'A change that goes through a certified program and is guaranteed to move data from one valid state to another.', example: 'TP2 debits one account and credits another by exactly the same amount.' },
+  { term: 'Separation of Duty', full: '', plain: 'No single person should be able to complete an entire critical action alone; different steps require different people.', example: 'Asha initiates (TP1); Ravi approves (TP2). Neither can do both.' }
+];
+
+// Simulated clock
+var SIMULATED_BASE = new Date(2026, 9, 13, 9, 30, 0); // Oct 13, 2026 09:30:00
+var clockOffset = 0;
+function simTime() {
+  var t = new Date(SIMULATED_BASE.getTime() + clockOffset * 1000);
+  clockOffset += 3;
+  return t.toTimeString().slice(0, 8);
+}
+function resetClock() { clockOffset = 0; }
+
+// Presenter notes per scenario per frame (will be built with frames)
+var SLIDE_CUES = {
+  1: 'Slide 3 — components',
+  2: 'Slide 4 — pipeline',
+  3: 'Slide 4 — pipeline',
+  4: 'Slide 5 — rules',
+  5: 'Slide 4 — pipeline'
+};
+
+// Stage names
+var STAGES = [
+  { num: 1, name: 'User logs in', ruleIds: ['E3'] },
+  { num: 2, name: 'Triple check', ruleIds: ['E1', 'E2'] },
+  { num: 3, name: 'TP runs', ruleIds: ['C2', 'C5'] },
+  { num: 4, name: 'Log written', ruleIds: ['C4'] },
+  { num: 5, name: 'IVP verifies', ruleIds: ['C1'] }
+];
+
+
+// =============================================================================
+// 2. ENGINE — pure functions, no DOM
+// =============================================================================
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function makeState(overrides) {
+  var s = {
+    balances: deepClone(INITIAL_BALANCES),
+    pending: [],
+    ledger: [],
+    log: []
+  };
+  if (overrides) {
+    for (var k in overrides) { s[k] = deepClone(overrides[k]); }
+  }
+  return s;
+}
+
+function authenticate(userId) {
+  // Simulated: passes for known users, fails for unknown
+  return !!USERS[userId];
+}
+
+function checkE1(tpId, targetCdis) {
+  // E1: is the TP certified for all the CDIs it will touch?
+  if (!tpId) return { pass: false, reason: 'No TP is being used. Direct data access is not allowed.' };
+  var certified = E1_RELATIONS[tpId];
+  if (!certified) return { pass: false, reason: 'TP "' + tpId + '" is not in the certified relations.' };
+  for (var i = 0; i < targetCdis.length; i++) {
+    if (targetCdis[i] === 'AUDIT_LOG') continue; // all TPs may append to log (C4)
+    if (certified.indexOf(targetCdis[i]) === -1) {
+      return { pass: false, reason: 'TP ' + tpId + ' is not certified for CDI ' + targetCdis[i] + '.' };
+    }
+  }
+  return { pass: true, reason: 'TP ' + tpId + ' is certified for ' + targetCdis.join(', ') + '.' };
+}
+
+function checkE2(userId, tpId, targetCdis) {
+  // E2: does the (user, TP, CDIs) triple exist?
+  if (!tpId) return { pass: false, reason: 'No TP specified. No access triple can match a direct write.' };
+  for (var i = 0; i < E2_RELATIONS.length; i++) {
+    var rel = E2_RELATIONS[i];
+    if (rel.user === userId && rel.tp === tpId) {
+      return { pass: true, reason: 'Triple (' + USERS[userId].name + ', ' + tpId + ', [' + rel.cdis.join(', ') + ']) exists.' };
+    }
+  }
+  return { pass: false, reason: 'No triple (' + USERS[userId].name + ', ' + tpId + ', …) found in the relation list.' };
+}
+
+function checkE2WithList(userId, tpId, relations) {
+  for (var i = 0; i < relations.length; i++) {
+    var rel = relations[i];
+    if (rel.user === userId && rel.tp === tpId) {
+      return { pass: true, reason: 'Triple found.' };
+    }
+  }
+  return { pass: false, reason: 'No triple found.' };
+}
+
+function validateUDI(udi, state) {
+  // C5: validate all aspects of the UDI
+  var reasons = [];
+  // Parse amount
+  var rawAmount = String(udi.amount).trim();
+  var amount = parseInt(rawAmount, 10);
+  if (rawAmount === '' || isNaN(amount) || String(amount) !== rawAmount) {
+    return { pass: false, reason: 'Amount "' + udi.amount + '" is not a valid whole number.' };
+  }
+  if (amount <= 0) {
+    return { pass: false, reason: 'Amount must be positive. Got ' + INR(amount) + '.' };
+  }
+  if (VALID_ACCOUNTS.indexOf(udi.from) === -1) {
+    return { pass: false, reason: 'Source account "' + udi.from + '" does not exist.' };
+  }
+  if (VALID_ACCOUNTS.indexOf(udi.to) === -1) {
+    return { pass: false, reason: 'Destination account "' + udi.to + '" does not exist.' };
+  }
+  if (udi.from === udi.to) {
+    return { pass: false, reason: 'Source and destination must differ. Both are ' + udi.from + '.' };
+  }
+  if (amount > state.balances[udi.from]) {
+    return { pass: false, reason: 'Amount ' + INR(amount) + ' exceeds available balance of ' + INR(state.balances[udi.from]) + ' in ' + udi.from + '.' };
+  }
+  if (amount > TRANSFER_LIMIT) {
+    return { pass: false, reason: 'Amount ' + INR(amount) + ' exceeds the per-transfer limit of ' + INR(TRANSFER_LIMIT) + '.' };
+  }
+  return { pass: true, reason: 'UDI validated: ' + udi.from + ' → ' + udi.to + ', ' + INR(amount) + '.', amount: amount };
+}
+
+function runTP1(state, udi) {
+  // Creates a pending transfer CDI
+  var amount = parseInt(udi.amount, 10);
+  var item = { id: 'T-001', from: udi.from, to: udi.to, amount: amount, createdBy: udi.createdBy };
+  state.pending.push(item);
+  return { changed: ['PENDING'], detail: 'Created pending transfer T-001: ' + udi.from + ' → ' + udi.to + ', ' + INR(amount) + '.' };
+}
+
+function runTP2(state) {
+  // Approve and post the first pending transfer
+  if (state.pending.length === 0) return { changed: [], detail: 'No pending transfers.' };
+  var item = state.pending[0];
+  state.balances[item.from] -= item.amount;
+  state.balances[item.to] += item.amount;
+  state.ledger.push({
+    debit: { account: item.from, amount: item.amount },
+    credit: { account: item.to, amount: item.amount },
+    ref: item.id
+  });
+  state.pending = [];
+  return {
+    changed: ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING'],
+    detail: 'Posted ' + item.id + ': ' + item.from + ' −' + INR(item.amount) + ', ' + item.to + ' +' + INR(item.amount) + '. Ledger entry added.'
+  };
+}
+
+function appendLog(state, entry) {
+  // The ONLY function that touches the log. Entries are frozen. No delete/edit.
+  var e = Object.freeze(deepClone(entry));
+  state.log.push(e);
+  return state.log.length;
+}
+
+function runIVP(state) {
+  // IVP: Ledger Balance Check
+  var totalBal = 0;
+  for (var k in state.balances) totalBal += state.balances[k];
+  var balanceOk = totalBal === INVARIANT_TOTAL;
+
+  var totalDebits = 0, totalCredits = 0;
+  state.ledger.forEach(function(p) {
+    totalDebits += p.debit.amount;
+    totalCredits += p.credit.amount;
+  });
+  var ledgerOk = totalDebits === totalCredits;
+
+  var pendingOk = true;
+  state.pending.forEach(function(p) {
+    if (VALID_ACCOUNTS.indexOf(p.from) === -1 || VALID_ACCOUNTS.indexOf(p.to) === -1) pendingOk = false;
+  });
+
+  return {
+    pass: balanceOk && ledgerOk && pendingOk,
+    totalBalance: totalBal,
+    balanceOk: balanceOk,
+    totalDebits: totalDebits,
+    totalCredits: totalCredits,
+    ledgerOk: ledgerOk,
+    pendingOk: pendingOk
+  };
+}
+
+function certifySeparationOfDuty(relations) {
+  // Check if any user holds both TP1 and TP2
+  var userTps = {};
+  relations.forEach(function(r) {
+    if (!userTps[r.user]) userTps[r.user] = [];
+    userTps[r.user].push(r.tp);
+  });
+  var violations = [];
+  for (var uid in userTps) {
+    var tps = userTps[uid];
+    if (tps.indexOf('TP1') !== -1 && tps.indexOf('TP2') !== -1) {
+      violations.push({ user: uid, tps: ['TP1', 'TP2'] });
+    }
+  }
+  return { pass: violations.length === 0, violations: violations };
+}
+
+
+// =============================================================================
+// 3. SCENARIOS — build immutable frame arrays
+// =============================================================================
+
+function buildFrames(scenarioId, params) {
+  resetClock();
+  var frames = [];
+  params = params || {};
+
+  if (scenarioId === 1) {
+    frames = buildScenario1(params);
+  } else if (scenarioId === 2) {
+    frames = buildScenario2(params);
+  } else if (scenarioId === 3) {
+    frames = buildScenario3(params);
+  } else if (scenarioId === 4) {
+    frames = buildScenario4(params);
+  } else if (scenarioId === 5) {
+    frames = buildScenario5(params);
+  }
+
+  return frames.map(function(f) { return Object.freeze(f); });
+}
+
+function makeCheck(ruleId, status, detail) {
+  var r = RULES_MAP[ruleId];
+  return { rule: ruleId, label: r ? r.label : ruleId, status: status, detail: detail };
+}
+
+function stageStatus(checks) {
+  for (var i = 0; i < checks.length; i++) {
+    if (checks[i].status === 'fail') return 'fail';
+  }
+  return 'pass';
+}
+
+// -- Scenario 1: Normal Transfer --
+function buildScenario1(params) {
+  var amount = params.amount !== undefined ? String(params.amount).trim() : '5000';
+  var state = makeState();
+  var frames = [];
+  var time;
+
+  // ===== PART 1: Asha runs TP1 =====
+  // Frame 0: Introduction
+  time = simTime();
+  frames.push({
+    stage: 0, stageStatuses: ['pending','pending','pending','pending','pending'],
+    checks: [],
+    triple: { user: null, tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha Patil wants to transfer ' + (isNaN(parseInt(amount,10)) ? '"'+amount+'"' : INR(parseInt(amount,10))) + ' from ACC-1001 to ACC-1002.',
+    modelCaption: 'A UDI (Unconstrained Data Item) is about to enter the system through TP1.',
+    rulesTouched: [],
+    actor: USERS.asha,
+    tp: 'TP1',
+    part: 1,
+    presenterNote: { say: 'We start with a simple transfer. Asha is a clerk — she can only initiate, not approve.', pointAt: 'Actor card on the left', modelTerm: 'UDI, TP1', slideCue: 'Slide 3 — components', ifAsked: 'Clark-Wilson differs from Biba: Biba uses levels and read/write rules; Clark-Wilson uses certified programs, access triples and separation of duty.' }
+  });
+
+  // Frame 1: Stage 1 — E3 authentication
+  time = simTime();
+  var authOk = authenticate('asha');
+  var s1checks = [makeCheck('E3', 'pass', 'Asha Patil authenticated (simulated). Time: ' + time + '.')];
+  frames.push({
+    stage: 1, stageStatuses: ['active','pending','pending','pending','pending'],
+    checks: s1checks,
+    triple: { user: 'Asha Patil (Clerk)', tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'The system verifies who Asha is before she can do anything.',
+    modelCaption: 'E3: the system must authenticate every user trying to run a TP.',
+    rulesTouched: [{ id: 'E3', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    presenterNote: { say: 'Authentication comes first — E3. Even in this simulation, no one skips it.', pointAt: 'Stage 1 in the centre, actor card', modelTerm: 'E3 — Authentication', slideCue: 'Slide 4 — pipeline', ifAsked: 'E3 is user authentication. In real systems this is passwords, tokens or biometrics.' }
+  });
+
+  // Frame 2: Stage 2 — E1 + E2 triple check (plus standing C3, E4)
+  time = simTime();
+  var e1res = checkE1('TP1', ['PENDING']);
+  var e2res = checkE2('asha', 'TP1', ['PENDING']);
+  var s2checks = [
+    makeCheck('E1', e1res.pass ? 'pass' : 'fail', e1res.reason),
+    makeCheck('E2', e2res.pass ? 'pass' : 'fail', e2res.reason),
+    makeCheck('C3', 'info', 'Separation of duty certified by Neha Kale: Asha holds only TP1; no one holds both TP1 and TP2. Standing rule.'),
+    makeCheck('E4', 'info', 'Only Neha (certifier) may change the relation list; she holds no execute rights. Standing rule.')
+  ];
+  frames.push({
+    stage: 2, stageStatuses: ['pass','active','pending','pending','pending'],
+    checks: s2checks,
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'The system checks: is Asha allowed to run this program on this data?',
+    modelCaption: 'E1: TP1 is certified for PENDING. E2: the triple (Asha, TP1, [PENDING]) exists. C3 and E4 are standing rules.',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'pass' }, { id: 'C3', status: 'standing' }, { id: 'E4', status: 'standing' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    presenterNote: { say: 'E1 checks the program is certified; E2 checks the user-program-data triple. C3 and E4 are always active.', pointAt: 'Stage 2 checks, triple slots filling in', modelTerm: 'Access triple, E1, E2, C3, E4', slideCue: 'Slide 5 — rules', ifAsked: 'E1 says "is this TP certified for these CDIs?" E2 says "is this user bound to this TP and these CDIs?"' }
+  });
+
+  // Frame 3: Stage 3 — TP1 runs (C5 validation, C2)
+  time = simTime();
+  var udi = { from: 'ACC-1001', to: 'ACC-1002', amount: amount, createdBy: 'asha' };
+  var c5res = validateUDI(udi, state);
+  var s3checks;
+  var tpResult = null;
+  if (c5res.pass) {
+    tpResult = runTP1(state, udi);
+    s3checks = [
+      makeCheck('C5', 'pass', c5res.reason),
+      makeCheck('C2', 'pass', 'TP1 transforms UDI into pending-transfer CDI T-001. ' + tpResult.detail)
+    ];
+  } else {
+    s3checks = [
+      makeCheck('C5', 'fail', c5res.reason)
+    ];
+  }
+  var s3status = stageStatus(s3checks);
+  frames.push({
+    stage: 3,
+    stageStatuses: ['pass','pass', s3status === 'pass' ? 'active' : 'fail', 'pending','pending'],
+    checks: s3checks,
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    state: deepClone(state),
+    diff: c5res.pass ? { changed: tpResult.changed, detail: tpResult.detail } : null,
+    plainCaption: c5res.pass
+      ? 'The input is valid. TP1 creates a pending transfer record — the UDI becomes a CDI.'
+      : 'The input is rejected: ' + c5res.reason + ' Nothing becomes a CDI.',
+    modelCaption: c5res.pass
+      ? 'C5: UDI validated and accepted. C2: TP1 transforms state from valid to valid.'
+      : 'C5 DENIED: ' + c5res.reason,
+    rulesTouched: c5res.pass
+      ? [{ id: 'C5', status: 'pass' }, { id: 'C2', status: 'pass' }]
+      : [{ id: 'C5', status: 'denied' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1, c5Failed: !c5res.pass,
+    presenterNote: { say: c5res.pass ? 'C5 validates the raw input — amount, accounts, limits. The UDI becomes a CDI.' : 'C5 catches the bad input and stops it from entering the system.', pointAt: 'Stage 3, amount field, pending queue', modelTerm: 'C5, C2, UDI → CDI', slideCue: 'Slide 4 — pipeline', ifAsked: 'C5 is the gatekeeper: no raw input enters the constrained world without validation.' }
+  });
+
+  if (!c5res.pass) {
+    // Log the security event and end Part 1
+    time = simTime();
+    appendLog(state, { time: time, type: 'SECURITY_EVENT', actor: 'Asha Patil', tp: 'TP1', detail: 'C5 validation failed: ' + c5res.reason });
+    frames.push({
+      stage: 4,
+      stageStatuses: ['pass','pass','fail','active','pending'],
+      checks: [makeCheck('C4', 'pass', 'SECURITY EVENT logged: C5 validation failed.')],
+      triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+      state: deepClone(state),
+      diff: { changed: ['AUDIT_LOG'], detail: 'Security event logged.' },
+      plainCaption: 'Even though the transfer was rejected, the attempt is logged.',
+      modelCaption: 'C4: every TP appends to the audit log. Denied attempts are logged as security events.',
+      rulesTouched: [{ id: 'C4', status: 'pass' }],
+      actor: USERS.asha, authStatus: 'pass',
+      tp: 'TP1', part: 1, isResult: true, resultType: 'blocked', resultStage: 3,
+      showDenyNote: true,
+      presenterNote: { say: 'Even failed attempts get logged. This is good practice beyond what C4 strictly requires.', pointAt: 'Audit log, stage 4', modelTerm: 'C4 — audit logging', slideCue: 'Slide 4 — pipeline', ifAsked: 'Logging denials means you can detect probing and patterns of misuse.' }
+    });
+    return frames;
+  }
+
+  // Frame 4: Stage 4 — Log written (C4)
+  time = simTime();
+  appendLog(state, { time: time, type: 'ACTION', actor: 'Asha Patil', tp: 'TP1', detail: 'Initiated transfer T-001: ACC-1001 → ACC-1002, ' + INR(parseInt(amount,10)) + '.' });
+  frames.push({
+    stage: 4, stageStatuses: ['pass','pass','pass','active','pending'],
+    checks: [makeCheck('C4', 'pass', 'Log entry #1: TP1 initiated T-001. Append-only, tamper-evident.')],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    state: deepClone(state),
+    diff: { changed: ['AUDIT_LOG'], detail: 'Log entry #1 appended.' },
+    plainCaption: 'The action is recorded in the append-only audit log. No one can erase it.',
+    modelCaption: 'C4: TP1 appends enough information to reconstruct what it did.',
+    rulesTouched: [{ id: 'C4', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    presenterNote: { say: 'C4: every TP writes to the log. The log is append-only — no edits, no deletes.', pointAt: 'Audit log on the right', modelTerm: 'C4 — audit logging', slideCue: 'Slide 4 — pipeline', ifAsked: 'C4 creates the audit trail. Combined with IVPs, it lets you trace any discrepancy.' }
+  });
+
+  // Frame 5: Stage 5 — IVP (C1)
+  time = simTime();
+  var ivp1 = runIVP(state);
+  frames.push({
+    stage: 5, stageStatuses: ['pass','pass','pass','pass','active'],
+    checks: [
+      makeCheck('C1', ivp1.pass ? 'pass' : 'fail',
+        'Sum of balances: ' + INR(ivp1.totalBalance) + ' (expected ' + INR(INVARIANT_TOTAL) + '). ' +
+        'Debits: ' + INR(ivp1.totalDebits) + ', Credits: ' + INR(ivp1.totalCredits) + '. ' +
+        'Pending references: ' + (ivp1.pendingOk ? 'valid' : 'invalid') + '.'
+      )
+    ],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'The integrity check confirms everything is still consistent. Part 1 complete.',
+    modelCaption: 'C1: IVP confirms all CDIs are in a valid state. Balance total: ' + INR(INVARIANT_TOTAL) + '.',
+    rulesTouched: [{ id: 'C1', status: ivp1.pass ? 'pass' : 'denied' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1, ivpResult: ivp1,
+    isResult: true, resultType: 'success', resultStage: 5,
+    presenterNote: { say: 'IVP checks the invariant: total balances must equal ₹70,000. Part 1 is done — the transfer is pending.', pointAt: 'IVP result, balances', modelTerm: 'C1, IVP', slideCue: 'Slide 4 — pipeline', ifAsked: 'The IVP is like a double-entry bookkeeping check: totals must always balance.' }
+  });
+
+  // ===== PART 2: Ravi runs TP2 =====
+  // Frame 6: Part 2 intro
+  time = simTime();
+  frames.push({
+    stage: 0, stageStatuses: ['pending','pending','pending','pending','pending'],
+    checks: [],
+    triple: { user: null, tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Now Ravi Deshmukh (Supervisor) must approve and post the transfer. A different person for the second step.',
+    modelCaption: 'Separation of duty (C3): the initiator and the approver must be different users.',
+    rulesTouched: [],
+    actor: USERS.ravi,
+    tp: 'TP2', part: 2,
+    presenterNote: { say: 'Part 2: a different user, Ravi, does the approval. This is separation of duty in action.', pointAt: 'Actor card changing to Ravi', modelTerm: 'C3, separation of duty', slideCue: 'Slide 5 — rules', ifAsked: 'Separation of duty means fraud needs two people to collude, not just one.' }
+  });
+
+  // Frame 7: Stage 1 — Ravi authenticates
+  time = simTime();
+  frames.push({
+    stage: 1, stageStatuses: ['active','pending','pending','pending','pending'],
+    checks: [makeCheck('E3', 'pass', 'Ravi Deshmukh authenticated (simulated). Time: ' + time + '.')],
+    triple: { user: 'Ravi Deshmukh (Supervisor)', tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Ravi logs in. The system verifies his identity.',
+    modelCaption: 'E3: authentication.',
+    rulesTouched: [{ id: 'E3', status: 'pass' }],
+    actor: USERS.ravi, authStatus: 'pass',
+    tp: 'TP2', part: 2,
+    presenterNote: { say: 'Ravi authenticates — same E3 check, different user.', pointAt: 'Stage 1', modelTerm: 'E3', slideCue: 'Slide 4 — pipeline', ifAsked: 'Every user goes through E3, regardless of role.' }
+  });
+
+  // Frame 8: Stage 2 — Triple check for Ravi + TP2
+  time = simTime();
+  var e1res2 = checkE1('TP2', ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING']);
+  var e2res2 = checkE2('ravi', 'TP2', ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING']);
+  frames.push({
+    stage: 2, stageStatuses: ['pass','active','pending','pending','pending'],
+    checks: [
+      makeCheck('E1', e1res2.pass ? 'pass' : 'fail', e1res2.reason),
+      makeCheck('E2', e2res2.pass ? 'pass' : 'fail', e2res2.reason),
+      makeCheck('C3', 'info', 'Ravi holds only TP2. Asha holds only TP1. Separation of duty is maintained.'),
+      makeCheck('E4', 'info', 'Relation list unchanged; only Neha may modify it.')
+    ],
+    triple: { user: 'Ravi Deshmukh (Supervisor)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'The system checks: is Ravi allowed to run TP2 on these accounts and the ledger?',
+    modelCaption: 'E1: TP2 is certified for these CDIs. E2: (Ravi, TP2, [ACC-1001, ACC-1002, LEDGER, PENDING]) exists.',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'pass' }, { id: 'C3', status: 'standing' }, { id: 'E4', status: 'standing' }],
+    actor: USERS.ravi, authStatus: 'pass',
+    tp: 'TP2', part: 2,
+    presenterNote: { say: 'E1 and E2 pass for Ravi and TP2. C3 is satisfied: different people for initiate and approve.', pointAt: 'Stage 2, triple slots', modelTerm: 'E1, E2, C3', slideCue: 'Slide 5 — rules', ifAsked: 'The triple is the heart of Clark-Wilson access control: user + program + data must all match.' }
+  });
+
+  // Frame 9: Stage 3 — TP2 runs (C2, no UDI so no C5)
+  time = simTime();
+  var prevState = deepClone(state);
+  var tp2res = runTP2(state);
+  frames.push({
+    stage: 3, stageStatuses: ['pass','pass','active','pending','pending'],
+    checks: [
+      makeCheck('C2', 'pass', 'TP2 moves funds and writes a ledger posting: well-formed transaction. ' + tp2res.detail),
+      makeCheck('C5', 'info', 'TP2 takes no UDI (the pending item is already a CDI). C5 not applicable here.')
+    ],
+    triple: { user: 'Ravi Deshmukh (Supervisor)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    state: deepClone(state),
+    prevState: prevState,
+    diff: { changed: tp2res.changed, detail: tp2res.detail },
+    plainCaption: 'TP2 debits ACC-1001 and credits ACC-1002 by exactly ' + INR(parseInt(amount,10)) + '. The ledger records both sides.',
+    modelCaption: 'C2: TP2 is a well-formed transaction — it moves CDIs from one valid state to another.',
+    rulesTouched: [{ id: 'C2', status: 'pass' }],
+    actor: USERS.ravi, authStatus: 'pass',
+    tp: 'TP2', part: 2,
+    presenterNote: { say: 'TP2 is the well-formed transaction: debit and credit by the same amount. Data stays valid.', pointAt: 'Balances changing, ledger entry', modelTerm: 'C2, well-formed transaction', slideCue: 'Slide 7 — why it works', ifAsked: 'A well-formed transaction guarantees the operation itself cannot corrupt data.' }
+  });
+
+  // Frame 10: Stage 4 — Log (C4)
+  time = simTime();
+  appendLog(state, { time: time, type: 'ACTION', actor: 'Ravi Deshmukh', tp: 'TP2', detail: 'Approved and posted T-001. ACC-1001: ' + INR(state.balances['ACC-1001']) + ', ACC-1002: ' + INR(state.balances['ACC-1002']) + '.' });
+  frames.push({
+    stage: 4, stageStatuses: ['pass','pass','pass','active','pending'],
+    checks: [makeCheck('C4', 'pass', 'Log entry #2: TP2 approved T-001. Append-only.')],
+    triple: { user: 'Ravi Deshmukh (Supervisor)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    state: deepClone(state),
+    diff: { changed: ['AUDIT_LOG'], detail: 'Log entry #2 appended.' },
+    plainCaption: 'The approval and posting are recorded in the audit log.',
+    modelCaption: 'C4: TP2 appends to the log.',
+    rulesTouched: [{ id: 'C4', status: 'pass' }],
+    actor: USERS.ravi, authStatus: 'pass',
+    tp: 'TP2', part: 2,
+    presenterNote: { say: 'Second log entry: who approved, what changed. The trail is complete.', pointAt: 'Audit log, second entry', modelTerm: 'C4', slideCue: 'Slide 4 — pipeline', ifAsked: 'C4 creates non-repudiation: Ravi cannot deny he approved the transfer.' }
+  });
+
+  // Frame 11: Stage 5 — IVP (C1)
+  time = simTime();
+  var ivp2 = runIVP(state);
+  frames.push({
+    stage: 5, stageStatuses: ['pass','pass','pass','pass','active'],
+    checks: [
+      makeCheck('C1', ivp2.pass ? 'pass' : 'fail',
+        'Sum of balances: ' + INR(ivp2.totalBalance) + ' (expected ' + INR(INVARIANT_TOTAL) + '). ' +
+        'Debits: ' + INR(ivp2.totalDebits) + ', Credits: ' + INR(ivp2.totalCredits) + '. ' +
+        'Pending: empty.'
+      )
+    ],
+    triple: { user: 'Ravi Deshmukh (Supervisor)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'The integrity check passes. Total is still ' + INR(INVARIANT_TOTAL) + '. The transfer is complete.',
+    modelCaption: 'C1: IVP confirms all CDIs remain valid. ' + INR(state.balances['ACC-1001']) + ' + ' + INR(state.balances['ACC-1002']) + ' = ' + INR(INVARIANT_TOTAL) + '.',
+    rulesTouched: [{ id: 'C1', status: ivp2.pass ? 'pass' : 'denied' }],
+    actor: USERS.ravi, authStatus: 'pass',
+    tp: 'TP2', part: 2, ivpResult: ivp2,
+    isResult: true, resultType: 'success', resultStage: 5,
+    presenterNote: { say: 'IVP passes: ₹45,000 + ₹25,000 = ₹70,000. Every rule was touched in this scenario.', pointAt: 'IVP result, rule strip', modelTerm: 'C1, IVP', slideCue: 'Slide 7 — why it works', ifAsked: 'The IVP is like the auditor checking the books — it confirms nothing was lost or created.' }
+  });
+
+  // Frame 12: Recap
+  frames.push({
+    stage: -1, stageStatuses: ['pass','pass','pass','pass','pass'],
+    checks: [],
+    triple: { user: 'Ravi Deshmukh (Supervisor)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Four ideas made this transfer safe.',
+    modelCaption: 'All nine Clark-Wilson rules (C1–C5, E1–E4) were active during this scenario.',
+    rulesTouched: [],
+    actor: USERS.ravi, authStatus: 'pass',
+    tp: 'TP2', part: 2,
+    isRecap: true,
+    recap: [
+      { title: 'Well-formed transactions', desc: 'TP1 and TP2 are the only way to change data. They are certified to preserve validity (C2).', pointAt: 'Stage 3 — TP runs' },
+      { title: 'Separation of duty', desc: 'Asha initiates, Ravi approves. The relation list (C3) ensures no one person can do both.', pointAt: 'Stage 2 — the different triples' },
+      { title: 'Audit trail', desc: 'Every action is recorded in an append-only log. No one can erase what happened (C4).', pointAt: 'The audit log on the right' },
+      { title: 'Validated inputs', desc: 'Raw input from the outside world is checked before it can become a CDI (C5).', pointAt: 'Stage 3 — C5 validation' }
+    ],
+    presenterNote: { say: 'Four pillars: well-formed transactions, separation of duty, audit trail, validated inputs. All nine rules were active.', pointAt: 'Recap list and rule strip', modelTerm: 'C1–C5, E1–E4', slideCue: 'Slide 7 — why it works', ifAsked: 'The genius of Clark-Wilson is that these four ideas reinforce each other — removing any one weakens the rest.' }
+  });
+
+  return frames;
+}
+
+// -- Scenario 2: Edit the ledger directly --
+function buildScenario2(params) {
+  var writtenValue = params.writtenValue !== undefined ? String(params.writtenValue) : '95000';
+  var state = makeState();
+  var frames = [];
+  var time;
+
+  // Frame 0: Intro
+  time = simTime();
+  frames.push({
+    stage: 0, stageStatuses: ['pending','pending','pending','pending','pending'],
+    checks: [],
+    triple: { user: null, tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha tries to write ' + INR(parseInt(writtenValue,10) || 0) + ' directly into ACC-1001, bypassing all programs.',
+    modelCaption: 'Direct CDI manipulation without a TP — the system must block this.',
+    rulesTouched: [],
+    actor: USERS.asha,
+    tp: null, part: 1,
+    scenarioType: 'directEdit', writtenValue: writtenValue,
+    presenterNote: { say: 'What if Asha tries to skip the programs and edit the data directly?', pointAt: 'The value field on the left', modelTerm: 'Direct CDI access', slideCue: 'Slide 4 — pipeline', ifAsked: 'In Clark-Wilson, users never touch CDIs directly — that is the fundamental principle.' }
+  });
+
+  // Frame 1: Stage 1 — E3
+  time = simTime();
+  frames.push({
+    stage: 1, stageStatuses: ['active','pending','pending','pending','pending'],
+    checks: [makeCheck('E3', 'pass', 'Asha Patil authenticated (simulated). Time: ' + time + '.')],
+    triple: { user: 'Asha Patil (Clerk)', tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha is who she says she is. Authentication passes.',
+    modelCaption: 'E3: authentication passes — but authentication alone does not grant access.',
+    rulesTouched: [{ id: 'E3', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: null, part: 1,
+    scenarioType: 'directEdit', writtenValue: writtenValue,
+    presenterNote: { say: 'E3 passes — she is a real user. But being authenticated is not enough.', pointAt: 'Stage 1 passing', modelTerm: 'E3', slideCue: 'Slide 4 — pipeline', ifAsked: 'Authentication tells you WHO someone is; authorization tells you WHAT they can do.' }
+  });
+
+  // Frame 2: Stage 2 — E1 fail, E2 fail
+  time = simTime();
+  var e1direct = checkE1(null, ['ACC-1001']);
+  var e2direct = checkE2('asha', null, ['ACC-1001']);
+  frames.push({
+    stage: 2, stageStatuses: ['pass','fail','notreached','notreached','notreached'],
+    checks: [
+      makeCheck('E1', 'fail', e1direct.reason),
+      makeCheck('E2', 'fail', e2direct.reason)
+    ],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'none', cdis: 'ACC-1001' },
+    tripleStatus: { user: 'pass', tp: 'denied', cdis: 'denied' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'BLOCKED. No certified program is involved, and no access triple matches a direct write.',
+    modelCaption: 'E1 DENIED: no TP involved. E2 DENIED: no triple for a direct write. Stages 3–5 not reached.',
+    rulesTouched: [{ id: 'E1', status: 'denied' }, { id: 'E2', status: 'denied' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: null, part: 1,
+    scenarioType: 'directEdit', writtenValue: writtenValue,
+    isResult: true, resultType: 'blocked', resultStage: 2,
+    presenterNote: { say: 'Both E1 and E2 fail. Without a TP, there is no path to the data. This is the core of Clark-Wilson.', pointAt: 'Stage 2 denied, triple slots showing "none"', modelTerm: 'E1, E2 — enforcement', slideCue: 'Slide 5 — rules', ifAsked: 'Clark-Wilson prevents direct manipulation entirely — unlike discretionary systems where the owner decides.' }
+  });
+
+  // Log security event
+  time = simTime();
+  appendLog(state, { time: time, type: 'SECURITY_EVENT', actor: 'Asha Patil', tp: 'NONE', detail: 'Attempted direct write to ACC-1001 (' + INR(parseInt(writtenValue,10) || 0) + '). Blocked by E1, E2.' });
+  frames.push({
+    stage: 2, stageStatuses: ['pass','fail','notreached','notreached','notreached'],
+    checks: [
+      makeCheck('E1', 'fail', e1direct.reason),
+      makeCheck('E2', 'fail', e2direct.reason)
+    ],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'none', cdis: 'ACC-1001' },
+    tripleStatus: { user: 'pass', tp: 'denied', cdis: 'denied' },
+    state: deepClone(state),
+    diff: { changed: ['AUDIT_LOG'], detail: 'SECURITY EVENT logged.' },
+    plainCaption: 'Balances unchanged. The attempt is logged as a security event.',
+    modelCaption: 'C4 (good practice): denied attempts are logged. ACC-1001 remains ' + INR(50000) + '.',
+    rulesTouched: [{ id: 'E1', status: 'denied' }, { id: 'E2', status: 'denied' }, { id: 'C4', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: null, part: 1,
+    scenarioType: 'directEdit', writtenValue: writtenValue,
+    isResult: true, resultType: 'blocked', resultStage: 2,
+    showDenyNote: true,
+    presenterNote: { say: 'Balances unchanged. The attempt is logged — good practice beyond C4\'s minimum.', pointAt: 'Audit log, unchanged balances', modelTerm: 'C4, security event', slideCue: 'Slide 5 — rules', ifAsked: 'Logging denials means you can detect probing and patterns of misuse.' }
+  });
+
+  return frames;
+}
+
+// -- Scenario 3: Wrong person for the job --
+function buildScenario3(params) {
+  var state = makeState();
+  var frames = [];
+  var time;
+
+  // Frame 0: Intro
+  time = simTime();
+  frames.push({
+    stage: 0, stageStatuses: ['pending','pending','pending','pending','pending'],
+    checks: [],
+    triple: { user: null, tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Meera Joshi (Auditor) tries to run TP1 — Initiate Transfer. She has no permission to do this.',
+    modelCaption: 'The TP is certified (E1), but the user is not bound to it (E2). Let\u2019s see where it fails.',
+    rulesTouched: [],
+    actor: USERS.meera,
+    tp: 'TP1', part: 1,
+    presenterNote: { say: 'Meera is an auditor. She should only view logs, not initiate transfers.', pointAt: 'Actor card — Meera', modelTerm: 'E2 — access triple', slideCue: 'Slide 5 — rules', ifAsked: 'Even if a TP exists and is certified, a user must be bound to it via a triple to use it.' }
+  });
+
+  // Frame 1: Stage 1 — E3
+  time = simTime();
+  frames.push({
+    stage: 1, stageStatuses: ['active','pending','pending','pending','pending'],
+    checks: [makeCheck('E3', 'pass', 'Meera Joshi authenticated (simulated). Time: ' + time + '.')],
+    triple: { user: 'Meera Joshi (Auditor)', tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Meera is a legitimate user. Authentication passes.',
+    modelCaption: 'E3: authentication passes.',
+    rulesTouched: [{ id: 'E3', status: 'pass' }],
+    actor: USERS.meera, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    presenterNote: { say: 'E3 passes — she is a known user. Authentication is not authorization.', pointAt: 'Stage 1', modelTerm: 'E3', slideCue: 'Slide 4 — pipeline', ifAsked: 'Authentication and authorization are different. E3 handles who you are; E2 handles what you can do.' }
+  });
+
+  // Frame 2: Stage 2 — E1 pass, E2 fail
+  time = simTime();
+  var e1meera = checkE1('TP1', ['PENDING']);
+  var e2meera = checkE2('meera', 'TP1', ['PENDING']);
+  frames.push({
+    stage: 2, stageStatuses: ['pass','fail','notreached','notreached','notreached'],
+    checks: [
+      makeCheck('E1', 'pass', e1meera.reason),
+      makeCheck('E2', 'fail', e2meera.reason)
+    ],
+    triple: { user: 'Meera Joshi (Auditor)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    tripleStatus: { user: 'pass', tp: 'pass', cdis: 'denied' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'E1 passes — TP1 really is a certified program for PENDING. But E2 fails: Meera is not bound to TP1.',
+    modelCaption: 'E1 PASS: TP1 is certified for PENDING. E2 DENIED: no triple (Meera, TP1, …) exists. A certified program is not enough; the user must be bound to it.',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'denied' }],
+    actor: USERS.meera, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    isResult: true, resultType: 'blocked', resultStage: 2,
+    presenterNote: { say: 'E1 passes because TP1 is certified. But E2 fails: no triple binds Meera to TP1. Both must pass.', pointAt: 'E1 pass then E2 denied in stage 2', modelTerm: 'E1 vs E2', slideCue: 'Slide 5 — rules', ifAsked: 'E1 checks TP-to-CDI; E2 checks user-to-TP-to-CDI. They are independent checks.' }
+  });
+
+  // Log security event
+  time = simTime();
+  appendLog(state, { time: time, type: 'SECURITY_EVENT', actor: 'Meera Joshi', tp: 'TP1', detail: 'Attempted to run TP1. E2 denied: no access triple.' });
+  frames.push({
+    stage: 2, stageStatuses: ['pass','fail','notreached','notreached','notreached'],
+    checks: [
+      makeCheck('E1', 'pass', e1meera.reason),
+      makeCheck('E2', 'fail', e2meera.reason)
+    ],
+    triple: { user: 'Meera Joshi (Auditor)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    tripleStatus: { user: 'pass', tp: 'pass', cdis: 'denied' },
+    state: deepClone(state),
+    diff: { changed: ['AUDIT_LOG'], detail: 'SECURITY EVENT logged.' },
+    plainCaption: 'The attempt is logged. Balances and pending queue unchanged.',
+    modelCaption: 'Security event logged. Teaching point: a certified program is not enough; the user must be bound to it.',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'denied' }, { id: 'C4', status: 'pass' }],
+    actor: USERS.meera, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    isResult: true, resultType: 'blocked', resultStage: 2,
+    showDenyNote: true,
+    presenterNote: { say: 'Logged as a security event. Key insight: having the right program is not enough without the right triple.', pointAt: 'Audit log', modelTerm: 'E2, C4', slideCue: 'Slide 5 — rules', ifAsked: 'Logging denials means you can detect probing and patterns of misuse.' }
+  });
+
+  return frames;
+}
+
+// -- Scenario 4: Approve your own transfer --
+function buildScenario4(params) {
+  var state = makeState();
+  // Start state: T-001 pending, created by Asha
+  state.pending.push({ id: 'T-001', from: 'ACC-1001', to: 'ACC-1002', amount: 5000, createdBy: 'asha' });
+  state.log.push(Object.freeze({ time: '09:30:00', type: 'ACTION', actor: 'Asha Patil', tp: 'TP1', detail: 'Initiated transfer T-001.' }));
+  var frames = [];
+  var time;
+
+  // Frame 0: Intro
+  time = simTime();
+  frames.push({
+    stage: 0, stageStatuses: ['pending','pending','pending','pending','pending'],
+    checks: [],
+    triple: { user: null, tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha initiated T-001. Now she tries to approve it herself using TP2.',
+    modelCaption: 'Same user for both halves of a critical action — separation of duty should prevent this.',
+    rulesTouched: [],
+    actor: USERS.asha,
+    tp: 'TP2', part: 1,
+    presenterNote: { say: 'Asha created the transfer. Can she also approve it? That would defeat separation of duty.', pointAt: 'Pending queue showing T-001, actor card', modelTerm: 'C3, separation of duty', slideCue: 'Slide 5 — rules', ifAsked: 'Separation of duty is a core fraud prevention principle, not unique to Clark-Wilson but formalized in it.' }
+  });
+
+  // Frame 1: Stage 1 — E3
+  time = simTime();
+  frames.push({
+    stage: 1, stageStatuses: ['active','pending','pending','pending','pending'],
+    checks: [makeCheck('E3', 'pass', 'Asha Patil authenticated (simulated). Time: ' + time + '.')],
+    triple: { user: 'Asha Patil (Clerk)', tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha is authenticated. She is a real user.',
+    modelCaption: 'E3: authentication passes.',
+    rulesTouched: [{ id: 'E3', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP2', part: 1,
+    presenterNote: { say: 'E3 passes. Being authenticated does not mean she can approve.', pointAt: 'Stage 1', modelTerm: 'E3', slideCue: 'Slide 4 — pipeline', ifAsked: 'Authentication is a necessary but not sufficient condition for access.' }
+  });
+
+  // Frame 2: Stage 2 — E1 pass, E2 fail
+  time = simTime();
+  var e1asha2 = checkE1('TP2', ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING']);
+  var e2asha2 = checkE2('asha', 'TP2', ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING']);
+  frames.push({
+    stage: 2, stageStatuses: ['pass','fail','notreached','notreached','notreached'],
+    checks: [
+      makeCheck('E1', 'pass', e1asha2.reason),
+      makeCheck('E2', 'fail', e2asha2.reason)
+    ],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    tripleStatus: { user: 'pass', tp: 'pass', cdis: 'denied' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'BLOCKED. TP2 is a real certified program, but Asha has no triple for it. She can initiate but not approve.',
+    modelCaption: 'E1 PASS: TP2 is certified. E2 DENIED: no triple (Asha, TP2, …). The relation list was certified (C3) so nobody holds both TP1 and TP2.',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'denied' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP2', part: 1,
+    isResult: true, resultType: 'blocked', resultStage: 2,
+    presenterNote: { say: 'E2 blocks her. The relation list was certified by C3 so no one holds both TPs. Fraud needs collusion.', pointAt: 'E2 denied, then the explanation below', modelTerm: 'E2, C3', slideCue: 'Slide 5 — rules', ifAsked: 'C3 is certified by a person (security officer); E2 is enforced by the system. Together they prevent this.' }
+  });
+
+  // Frame 3: Explanation + toggle
+  time = simTime();
+  appendLog(state, { time: time, type: 'SECURITY_EVENT', actor: 'Asha Patil', tp: 'TP2', detail: 'Attempted to run TP2. E2 denied: no access triple. Separation of duty enforced.' });
+  frames.push({
+    stage: 2, stageStatuses: ['pass','fail','notreached','notreached','notreached'],
+    checks: [
+      makeCheck('E1', 'pass', e1asha2.reason),
+      makeCheck('E2', 'fail', e2asha2.reason)
+    ],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP2 — Approve and Post', cdis: '[ACC-1001, ACC-1002, LEDGER, PENDING]' },
+    tripleStatus: { user: 'pass', tp: 'pass', cdis: 'denied' },
+    state: deepClone(state),
+    diff: { changed: ['AUDIT_LOG'], detail: 'SECURITY EVENT logged.' },
+    plainCaption: 'The relation list was certified so that no one person holds both TP1 and TP2. Fraud now requires two people to collude.',
+    modelCaption: 'C3 certification ensures separation. E4: only Neha may change the list. Try the toggle below to see what a careless configuration would look like.',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'denied' }, { id: 'C3', status: 'standing' }, { id: 'E4', status: 'standing' }, { id: 'C4', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP2', part: 1,
+    isResult: true, resultType: 'blocked', resultStage: 2,
+    showToggle: true,
+    showDenyNote: true,
+    presenterNote: { say: 'C3 and E4 work together. Show the toggle: if Asha got TP2, C3 certification would catch it.', pointAt: 'Toggle and the C3 result', modelTerm: 'C3, E4, separation of duty', slideCue: 'Slide 5 — rules', ifAsked: 'E4 protects the rules themselves: only the certifier can change the relation list, and she cannot run what she certifies.' }
+  });
+
+  return frames;
+}
+
+// -- Scenario 5: Bad input --
+function buildScenario5(params) {
+  var amount = params.amount !== undefined ? String(params.amount) : '-5000';
+  var from = params.from || 'ACC-1001';
+  var to = params.to || 'ACC-1002';
+  var state = makeState();
+  var frames = [];
+  var time;
+
+  // Frame 0: Intro
+  time = simTime();
+  frames.push({
+    stage: 0, stageStatuses: ['pending','pending','pending','pending','pending'],
+    checks: [],
+    triple: { user: null, tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha runs TP1 with input she controls. Will the system accept it?',
+    modelCaption: 'C5 validates every UDI. Try the presets or type your own value.',
+    rulesTouched: [],
+    actor: USERS.asha,
+    tp: 'TP1', part: 1,
+    scenarioType: 'badInput',
+    presenterNote: { say: 'What happens with bad input? C5 is the gatekeeper. Try the four presets.', pointAt: 'The amount field and preset buttons', modelTerm: 'C5, UDI validation', slideCue: 'Slide 4 — pipeline', ifAsked: 'C5 ensures no unchecked data can enter the constrained world. Every value is either rejected or transformed.' }
+  });
+
+  // Frame 1: Stage 1 — E3
+  time = simTime();
+  frames.push({
+    stage: 1, stageStatuses: ['active','pending','pending','pending','pending'],
+    checks: [makeCheck('E3', 'pass', 'Asha Patil authenticated (simulated). Time: ' + time + '.')],
+    triple: { user: 'Asha Patil (Clerk)', tp: null, cdis: null },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha is authenticated.',
+    modelCaption: 'E3: authentication passes.',
+    rulesTouched: [{ id: 'E3', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    scenarioType: 'badInput',
+    presenterNote: { say: 'E3 passes as usual.', pointAt: 'Stage 1', modelTerm: 'E3', slideCue: 'Slide 4 — pipeline', ifAsked: '' }
+  });
+
+  // Frame 2: Stage 2 — E1 + E2
+  time = simTime();
+  var e1s5 = checkE1('TP1', ['PENDING']);
+  var e2s5 = checkE2('asha', 'TP1', ['PENDING']);
+  frames.push({
+    stage: 2, stageStatuses: ['pass','active','pending','pending','pending'],
+    checks: [
+      makeCheck('E1', 'pass', e1s5.reason),
+      makeCheck('E2', 'pass', e2s5.reason)
+    ],
+    triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+    state: deepClone(state),
+    diff: null,
+    plainCaption: 'Asha is allowed to run TP1. The input validation happens next.',
+    modelCaption: 'E1 and E2 pass. C5 validation is part of the TP execution (stage 3).',
+    rulesTouched: [{ id: 'E1', status: 'pass' }, { id: 'E2', status: 'pass' }],
+    actor: USERS.asha, authStatus: 'pass',
+    tp: 'TP1', part: 1,
+    scenarioType: 'badInput',
+    presenterNote: { say: 'E1 and E2 pass — Asha has the right triple. Now the input is checked.', pointAt: 'Stage 2', modelTerm: 'E1, E2', slideCue: 'Slide 4 — pipeline', ifAsked: '' }
+  });
+
+  // Frame 3: Stage 3 — C5 validation
+  time = simTime();
+  var udi5 = { from: from, to: to, amount: amount, createdBy: 'asha' };
+  var c5res = validateUDI(udi5, state);
+
+  if (c5res.pass) {
+    var tp1res = runTP1(state, udi5);
+    frames.push({
+      stage: 3, stageStatuses: ['pass','pass','active','pending','pending'],
+      checks: [
+        makeCheck('C5', 'pass', c5res.reason),
+        makeCheck('C2', 'pass', 'TP1 created T-001. ' + tp1res.detail)
+      ],
+      triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+      state: deepClone(state),
+      diff: { changed: tp1res.changed, detail: tp1res.detail },
+      plainCaption: 'Input is valid! T-001 created in the pending queue.',
+      modelCaption: 'C5: UDI accepted. C2: TP1 transforms state validly.',
+      rulesTouched: [{ id: 'C5', status: 'pass' }, { id: 'C2', status: 'pass' }],
+      actor: USERS.asha, authStatus: 'pass',
+      tp: 'TP1', part: 1,
+      scenarioType: 'badInput',
+      presenterNote: { say: 'This input passed C5 validation — it becomes a CDI.', pointAt: 'Stage 3, pending queue', modelTerm: 'C5, C2', slideCue: 'Slide 4 — pipeline', ifAsked: 'Valid input is transformed into a CDI. Invalid input is rejected and never enters the constrained world.' }
+    });
+
+    // Log and IVP
+    time = simTime();
+    appendLog(state, { time: time, type: 'ACTION', actor: 'Asha Patil', tp: 'TP1', detail: 'Initiated T-001: ' + from + ' → ' + to + ', ' + INR(parseInt(amount,10)) + '.' });
+    frames.push({
+      stage: 4, stageStatuses: ['pass','pass','pass','active','pending'],
+      checks: [makeCheck('C4', 'pass', 'Log entry: TP1 initiated T-001.')],
+      triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+      state: deepClone(state),
+      diff: { changed: ['AUDIT_LOG'], detail: 'Log entry appended.' },
+      plainCaption: 'Action logged.',
+      modelCaption: 'C4: TP1 appends to the audit log.',
+      rulesTouched: [{ id: 'C4', status: 'pass' }],
+      actor: USERS.asha, authStatus: 'pass',
+      tp: 'TP1', part: 1,
+      scenarioType: 'badInput',
+      presenterNote: { say: 'Logged. The valid transfer is pending approval by Ravi.', pointAt: 'Audit log', modelTerm: 'C4', slideCue: 'Slide 4 — pipeline', ifAsked: '' }
+    });
+
+    var ivp5 = runIVP(state);
+    frames.push({
+      stage: 5, stageStatuses: ['pass','pass','pass','pass','active'],
+      checks: [makeCheck('C1', ivp5.pass ? 'pass' : 'fail', 'Balance total: ' + INR(ivp5.totalBalance) + '.')],
+      triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+      state: deepClone(state),
+      diff: null,
+      plainCaption: 'IVP passes. The valid input created T-001 successfully.',
+      modelCaption: 'C1: all CDIs are in a valid state.',
+      rulesTouched: [{ id: 'C1', status: 'pass' }],
+      actor: USERS.asha, authStatus: 'pass',
+      tp: 'TP1', part: 1,
+      scenarioType: 'badInput', ivpResult: ivp5,
+      isResult: true, resultType: 'success', resultStage: 5,
+      presenterNote: { say: 'Valid input succeeds. Now try a bad one with the presets.', pointAt: 'IVP result', modelTerm: 'C1', slideCue: 'Slide 4 — pipeline', ifAsked: '' }
+    });
+  } else {
+    // C5 fail
+    frames.push({
+      stage: 3, stageStatuses: ['pass','pass','fail','pending','pending'],
+      checks: [
+        makeCheck('C5', 'fail', c5res.reason)
+      ],
+      triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+      state: deepClone(state),
+      diff: null,
+      plainCaption: 'BLOCKED. The input fails validation: ' + c5res.reason,
+      modelCaption: 'C5 DENIED: ' + c5res.reason + ' Nothing becomes a CDI.',
+      rulesTouched: [{ id: 'C5', status: 'denied' }],
+      actor: USERS.asha, authStatus: 'pass',
+      tp: 'TP1', part: 1,
+      scenarioType: 'badInput',
+      isResult: true, resultType: 'blocked', resultStage: 3,
+      presenterNote: { say: 'C5 rejects it with a specific reason. The bad data never enters the system.', pointAt: 'Stage 3 C5 denied', modelTerm: 'C5 — input validation', slideCue: 'Slide 4 — pipeline', ifAsked: 'C5 is the input gatekeeper: it must handle every possible value.' }
+    });
+
+    // Log security event
+    time = simTime();
+    appendLog(state, { time: time, type: 'SECURITY_EVENT', actor: 'Asha Patil', tp: 'TP1', detail: 'C5 validation failed: ' + c5res.reason });
+    frames.push({
+      stage: 3, stageStatuses: ['pass','pass','fail','notreached','notreached'],
+      checks: [
+        makeCheck('C5', 'fail', c5res.reason),
+        makeCheck('C4', 'pass', 'SECURITY EVENT logged.')
+      ],
+      triple: { user: 'Asha Patil (Clerk)', tp: 'TP1 — Initiate Transfer', cdis: '[PENDING]' },
+      state: deepClone(state),
+      diff: { changed: ['AUDIT_LOG'], detail: 'Security event logged.' },
+      plainCaption: 'The rejected attempt is logged. No data was changed.',
+      modelCaption: 'C4: security event logged. Pending queue and balances unchanged.',
+      rulesTouched: [{ id: 'C5', status: 'denied' }, { id: 'C4', status: 'pass' }],
+      actor: USERS.asha, authStatus: 'pass',
+      tp: 'TP1', part: 1,
+      scenarioType: 'badInput',
+      isResult: true, resultType: 'blocked', resultStage: 3,
+      showDenyNote: true,
+      presenterNote: { say: 'Logged as a security event. Try another preset or type your own bad value.', pointAt: 'Audit log', modelTerm: 'C5, C4', slideCue: 'Slide 4 — pipeline', ifAsked: 'Logging denials means you can detect probing and patterns of misuse.' }
+    });
+  }
+
+  return frames;
+}
+
+
+// =============================================================================
+// 4. UI: render and view functions
+// =============================================================================
+
+var currentScenario = 1;
+var currentFrameIndex = 0;
+var currentFrames = [];
+var presenterOpen = false;
+var presenterTimerStart = null;
+var presenterTimerInterval = null;
+var popoutWindow = null;
+var scenarioParams = { 1: { amount: '5000' }, 2: { writtenValue: '95000' }, 5: { amount: '-5000', from: 'ACC-1001', to: 'ACC-1002' } };
+var denyNoteShown = {};
+
+function init() {
+  buildGlossary();
+  buildRulesOverlay();
+  buildRuleStrip();
+  loadScenario(1);
+  bindControls();
+}
+
+function loadScenario(id, keepFrame) {
+  currentScenario = id;
+  var params = scenarioParams[id] || {};
+  currentFrames = buildFrames(id, params);
+  if (!keepFrame) {
+    currentFrameIndex = 0;
+    denyNoteShown = {};
+  } else {
+    if (currentFrameIndex >= currentFrames.length) currentFrameIndex = currentFrames.length - 1;
+  }
+  updateScenarioTabs();
+  render();
+}
+
+function updateScenarioTabs() {
+  var tabs = document.querySelectorAll('.scenbar-tab');
+  tabs.forEach(function(t) {
+    t.classList.toggle('active', parseInt(t.getAttribute('data-scenario')) === currentScenario);
+  });
+}
+
+function render() {
+  var frame = currentFrames[currentFrameIndex];
+  if (!frame) return;
+
+  // Step counter
+  document.getElementById('step-counter').textContent = 'Step ' + (currentFrameIndex + 1) + ' of ' + currentFrames.length;
+
+  // Back/Next
+  var btnBack = document.getElementById('btn-back');
+  var btnNext = document.getElementById('btn-next');
+  btnBack.disabled = currentFrameIndex === 0;
+  if (currentFrameIndex === currentFrames.length - 1) {
+    if (currentScenario < 5) {
+      btnNext.textContent = 'Next scenario';
+    } else {
+      btnNext.textContent = 'Start again';
+    }
+  } else {
+    btnNext.textContent = 'Next';
+  }
+
+  // Captions
+  document.getElementById('caption-plain').textContent = frame.plainCaption;
+  renderModelCaption(frame);
+
+  // Columns
+  renderLeftColumn(frame);
+  renderCenterColumn(frame);
+  renderRightColumn(frame);
+  renderRuleStripState(frame);
+
+  // Presenter
+  renderPresenter(frame);
+  updatePopout(frame);
+}
+
+function renderModelCaption(frame) {
+  var el = document.getElementById('caption-model');
+  var html = '';
+  // Insert rule chips for touched rules
+  if (frame.rulesTouched && frame.rulesTouched.length > 0) {
+    frame.rulesTouched.forEach(function(rt) {
+      html += '<span class="rule-chip ' + rt.status + '">' + rt.id + '</span> ';
+    });
+  }
+  html += '<span>' + escHtml(frame.modelCaption) + '</span>';
+  el.innerHTML = html;
+}
+
+// ── Left Column ──
+function renderLeftColumn(frame) {
+  var el = document.getElementById('col-left');
+  var html = '';
+
+  // Section label
+  html += '<div class="section-label">' + svgIcon('user') + ' Who and What</div>';
+
+  // Actor card
+  if (frame.actor) {
+    html += '<div class="actor-card">';
+    html += '<div class="actor-name">' + escHtml(frame.actor.name) + '</div>';
+    html += '<div class="actor-role">' + escHtml(frame.actor.role) + '</div>';
+    if (frame.authStatus) {
+      html += '<div class="actor-auth ' + frame.authStatus + '">';
+      html += frame.authStatus === 'pass' ? '● Authenticated (simulated)' : '○ Not yet authenticated';
+      html += '</div>';
+    } else {
+      html += '<div class="actor-auth pending">○ Awaiting authentication (simulated)</div>';
+    }
+    html += '</div>';
+  }
+
+  // Access Triple
+  html += '<div class="section-label" style="margin-top:12px;">' + svgIcon('triple') + ' Access Triple</div>';
+  html += '<div class="triple-row">';
+  var ts = frame.tripleStatus || {};
+  html += renderTripleSlot('USER', frame.triple.user, ts.user);
+  html += renderTripleSlot('TP', frame.triple.tp, ts.tp);
+  html += renderTripleSlot('CDI', frame.triple.cdis, ts.cdis);
+  html += '</div>';
+
+  // UDI form (scenario-dependent)
+  if (frame.scenarioType === 'directEdit') {
+    html += renderDirectEditForm(frame);
+  } else if (frame.scenarioType === 'badInput' || (currentScenario === 1 && frame.part === 1 && frame.stage <= 3 && !frame.c5Failed)) {
+    html += renderUDIForm(frame);
+  } else if (currentScenario === 1 && frame.part === 1) {
+    html += renderUDIForm(frame);
+  }
+
+  // Icon legend
+  html += '<div class="icon-legend">';
+  html += '<span class="legend-item">' + svgIcon('cdi', 14) + ' CDI</span>';
+  html += '<span class="legend-item">' + svgIcon('udi', 14) + ' UDI</span>';
+  html += '<span class="legend-item">' + svgIcon('tp', 14) + ' TP</span>';
+  html += '<span class="legend-item">' + svgIcon('ivp', 14) + ' IVP</span>';
+  html += '<span class="legend-item">' + svgIcon('user', 14) + ' User</span>';
+  html += '<span class="legend-item">' + svgIcon('log', 14) + ' Log</span>';
+  html += '</div>';
+
+  el.innerHTML = html;
+
+  // Bind form events
+  bindFormEvents();
+}
+
+function renderTripleSlot(label, value, status) {
+  var cls = 'triple-slot-value';
+  if (status === 'denied') cls += ' denied';
+  else if (status === 'pass' || value) cls += ' pass';
+  var displayVal = value || 'none';
+  if (!value && status !== 'denied') displayVal = '—';
+  if (!value && status === 'denied') displayVal = 'none';
+  return '<div class="triple-slot">' +
+    '<div class="triple-slot-label">' + label + '</div>' +
+    '<div class="' + cls + '">' + escHtml(displayVal) + '</div>' +
+    '</div>';
+}
+
+function renderUDIForm(frame) {
+  var params = scenarioParams[currentScenario] || {};
+  var html = '<div class="udi-form">';
+  html += '<div class="udi-tag">' + svgIcon('udi', 14) + ' UDI — Transfer Request (free text input)</div>';
+
+  var disabled = '';
+  // Disable editing after stage 3 in scenario 1
+  if (currentScenario === 1 && frame.stage > 3) disabled = ' disabled';
+  if (currentScenario === 1 && frame.part === 2) disabled = ' disabled';
+
+  var fromVal = currentScenario === 5 ? (params.from || 'ACC-1001') : 'ACC-1001';
+  var toVal = currentScenario === 5 ? (params.to || 'ACC-1002') : 'ACC-1002';
+  var amtVal = currentScenario === 5 ? (params.amount || '-5000') : (params.amount || '5000');
+
+  html += '<label for="udi-from">From</label>';
+  html += '<input id="udi-from" value="' + escHtml(fromVal) + '"' + disabled + '>';
+  html += '<label for="udi-to">To</label>';
+  html += '<input id="udi-to" value="' + escHtml(toVal) + '"' + disabled + '>';
+  html += '<label for="udi-amount">Amount</label>';
+  html += '<input id="udi-amount" value="' + escHtml(amtVal) + '"' + disabled + ' placeholder="Enter amount">';
+
+  if (currentScenario === 5) {
+    html += '<div class="udi-presets">';
+    html += '<button class="small" data-preset="negative" title="Set to -5000">Negative (−5,000)</button>';
+    html += '<button class="small" data-preset="text" title="Set to text">Text ("five thousand")</button>';
+    html += '<button class="small" data-preset="same" title="Same account both sides">Same account</button>';
+    html += '<button class="small" data-preset="overlimit" title="Set to 999999">Over limit (₹9,99,999)</button>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderDirectEditForm(frame) {
+  var params = scenarioParams[2] || {};
+  var html = '<div class="udi-form">';
+  html += '<div class="udi-tag">⚠ Direct write attempt (no TP involved)</div>';
+  html += '<label for="udi-written">Value to write into ACC-1001</label>';
+  html += '<input id="udi-written" value="' + escHtml(params.writtenValue || '95000') + '"' + (frame.stage > 1 ? ' disabled' : '') + '>';
+  html += '</div>';
+  return html;
+}
+
+function bindFormEvents() {
+  var amtInput = document.getElementById('udi-amount');
+  var fromInput = document.getElementById('udi-from');
+  var toInput = document.getElementById('udi-to');
+  var writtenInput = document.getElementById('udi-written');
+
+  if (amtInput && !amtInput.disabled) {
+    amtInput.addEventListener('change', function() {
+      if (currentScenario === 1) {
+        scenarioParams[1] = scenarioParams[1] || {};
+        scenarioParams[1].amount = amtInput.value;
+        loadScenario(1, true);
+      } else if (currentScenario === 5) {
+        scenarioParams[5] = scenarioParams[5] || {};
+        scenarioParams[5].amount = amtInput.value;
+        loadScenario(5, true);
+      }
+    });
+  }
+  if (fromInput && !fromInput.disabled && currentScenario === 5) {
+    fromInput.addEventListener('change', function() {
+      scenarioParams[5] = scenarioParams[5] || {};
+      scenarioParams[5].from = fromInput.value;
+      loadScenario(5, true);
+    });
+  }
+  if (toInput && !toInput.disabled && currentScenario === 5) {
+    toInput.addEventListener('change', function() {
+      scenarioParams[5] = scenarioParams[5] || {};
+      scenarioParams[5].to = toInput.value;
+      loadScenario(5, true);
+    });
+  }
+  if (writtenInput && !writtenInput.disabled) {
+    writtenInput.addEventListener('change', function() {
+      scenarioParams[2] = scenarioParams[2] || {};
+      scenarioParams[2].writtenValue = writtenInput.value;
+      loadScenario(2, true);
+    });
+  }
+
+  // Preset buttons
+  document.querySelectorAll('[data-preset]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var preset = btn.getAttribute('data-preset');
+      scenarioParams[5] = scenarioParams[5] || {};
+      if (preset === 'negative') {
+        scenarioParams[5] = { amount: '-5000', from: 'ACC-1001', to: 'ACC-1002' };
+      } else if (preset === 'text') {
+        scenarioParams[5] = { amount: 'five thousand', from: 'ACC-1001', to: 'ACC-1002' };
+      } else if (preset === 'same') {
+        scenarioParams[5] = { amount: '5000', from: 'ACC-1001', to: 'ACC-1001' };
+      } else if (preset === 'overlimit') {
+        scenarioParams[5] = { amount: '999999', from: 'ACC-1001', to: 'ACC-1002' };
+      }
+      currentFrameIndex = 0;
+      loadScenario(5, false);
+    });
+  });
+}
+
+// ── Center Column ──
+function renderCenterColumn(frame) {
+  var el = document.getElementById('col-center');
+  var html = '';
+
+  html += '<div class="section-label">' + svgIcon('tp') + ' The Five Stages</div>';
+
+  if (frame.isRecap) {
+    html += renderRecap(frame);
+    el.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="stage-rail">';
+  for (var i = 0; i < STAGES.length; i++) {
+    var s = STAGES[i];
+    var status = frame.stageStatuses[i];
+    var isActive = (frame.stage === s.num);
+    var rowClass = 'stage-row';
+    if (status === 'active' || isActive) rowClass += ' active';
+    else if (status === 'pass') rowClass += ' pass';
+    else if (status === 'fail') rowClass += ' fail';
+    else if (status === 'notreached') rowClass += ' notreached';
+
+    html += '<div class="' + rowClass + '">';
+    html += '<div class="stage-marker"></div>';
+    html += '<div class="stage-header">';
+    html += '<span>Stage ' + s.num + ': ' + s.name + '</span>';
+    if (status === 'pass' && !isActive) html += ' <span class="stage-status-word pass">PASS</span>';
+    else if (status === 'fail') html += ' <span class="stage-status-word fail">DENIED</span>';
+    else if (status === 'notreached') html += ' <span class="stage-status-word notreached">NOT REACHED</span>';
+    else if (status === 'active' || isActive) html += ' <span class="stage-status-word active">●</span>';
+    html += '</div>';
+
+    // Show checks for active or fail stage
+    if (isActive || status === 'fail') {
+      if (frame.checks && frame.checks.length > 0) {
+        html += '<div class="stage-checks">';
+        frame.checks.forEach(function(c) {
+          html += '<div class="check-item">';
+          html += '<span class="check-icon">' + checkIcon(c.status) + '</span>';
+          html += '<div>';
+          html += '<span class="rule-chip ' + c.status + '">' + c.rule + '</span> ';
+          html += '<span class="check-label">' + escHtml(c.label) + '</span>';
+          html += '<div class="check-detail">' + escHtml(c.detail) + '</div>';
+          html += '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+    }
+
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Result banner
+  if (frame.isResult) {
+    if (frame.resultType === 'success') {
+      var changedCount = frame.diff ? frame.diff.changed.length : 0;
+      html += '<div class="result-banner success">';
+      html += checkIcon('pass');
+      html += '<div>Completed.' + (changedCount > 0 ? ' ' + changedCount + ' records changed.' : '') + '</div>';
+      html += '</div>';
+    } else if (frame.resultType === 'blocked') {
+      html += '<div class="result-banner blocked">';
+      html += checkIcon('fail');
+      html += '<div>Blocked at stage ' + frame.resultStage + '. No data changed.';
+      if (frame.diff && frame.diff.changed.indexOf('AUDIT_LOG') !== -1) {
+        html += '<div class="result-detail">Security event logged.</div>';
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+  }
+
+  // Scenario 4 toggle
+  if (frame.showToggle) {
+    html += renderToggle();
+  }
+
+  // Deny logging note
+  if (frame.showDenyNote && !denyNoteShown[currentScenario]) {
+    html += '<div class="deny-logging-note">Note: logging denied attempts is good practice beyond the minimum that C4 requires.</div>';
+    denyNoteShown[currentScenario] = true;
+  }
+
+  el.innerHTML = html;
+
+  // Bind toggle
+  if (frame.showToggle) bindToggle();
+}
+
+function renderRecap(frame) {
+  var html = '<div style="padding:8px 0;">';
+  html += '<div class="caption-plain serif" style="font-size:1.15rem;margin-bottom:12px;">Four ideas made this transfer safe:</div>';
+  html += '<ul class="recap-list">';
+  frame.recap.forEach(function(r) {
+    html += '<li>';
+    html += '<div class="recap-title">' + escHtml(r.title) + '</div>';
+    html += '<div class="recap-desc">' + escHtml(r.desc) + '</div>';
+    html += '<div style="font-size:0.75rem;color:var(--ink-2);margin-top:2px;">↗ ' + escHtml(r.pointAt) + '</div>';
+    html += '</li>';
+  });
+  html += '</ul></div>';
+  return html;
+}
+
+function renderToggle() {
+  var html = '<div class="toggle-container">';
+  html += '<button class="toggle-switch" id="toggle-careless" role="switch" aria-checked="false" aria-label="Simulate careless configuration"></button>';
+  html += '<span>Simulate a careless configuration (also give Asha TP2)</span>';
+  html += '</div>';
+  html += '<div id="toggle-result"></div>';
+  return html;
+}
+
+function bindToggle() {
+  var toggle = document.getElementById('toggle-careless');
+  if (!toggle) return;
+  toggle.addEventListener('click', function() {
+    var on = toggle.classList.toggle('on');
+    toggle.setAttribute('aria-checked', on ? 'true' : 'false');
+    var resultEl = document.getElementById('toggle-result');
+    if (on) {
+      // Add (Asha, TP2) to the list and certify
+      var modifiedRelations = deepClone(E2_RELATIONS);
+      modifiedRelations.push({ user: 'asha', tp: 'TP2', cdis: ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING'] });
+      var cert = certifySeparationOfDuty(modifiedRelations);
+      var html = '<div class="toggle-result failed">';
+      html += '<strong>C3 certification: FAILED.</strong> ';
+      if (cert.violations.length > 0) {
+        cert.violations.forEach(function(v) {
+          html += escHtml(USERS[v.user].name) + ' holds both ' + v.tps.join(' and ') + '. ';
+        });
+      }
+      html += 'This list is rejected and never goes live (E4: only the certifier changes the list).';
+      html += '</div>';
+      html += '<div class="hypothetical-line">';
+      html += '<strong>HYPOTHETICAL:</strong> If it did go live, E2 would let Asha approve her own transfer; C3 is the gap-closer.';
+      html += '</div>';
+      resultEl.innerHTML = html;
+    } else {
+      resultEl.innerHTML = '';
+    }
+  });
+}
+
+// ── Right Column ──
+function renderRightColumn(frame) {
+  var el = document.getElementById('col-right');
+  if (presenterOpen) {
+    el.classList.add('with-presenter');
+  } else {
+    el.classList.remove('with-presenter');
+  }
+
+  var html = '';
+  html += '<div class="section-label">' + svgIcon('cdi') + ' The Data</div>';
+
+  var st = frame.state;
+  var changed = frame.diff ? frame.diff.changed : [];
+
+  // Balances
+  html += '<div class="data-section">';
+  html += '<div class="data-label">Account Balances</div>';
+  html += '<div class="balance-row"><span>ACC-1001</span><span class="balance-amount' + (changed.indexOf('ACC-1001') !== -1 ? ' changed' : '') + '">' + INR(st.balances['ACC-1001']) + '</span></div>';
+  html += '<div class="balance-row"><span>ACC-1002</span><span class="balance-amount' + (changed.indexOf('ACC-1002') !== -1 ? ' changed' : '') + '">' + INR(st.balances['ACC-1002']) + '</span></div>';
+  html += '</div>';
+
+  // Pending
+  html += '<div class="data-section">';
+  html += '<div class="data-label">Pending Queue' + (changed.indexOf('PENDING') !== -1 ? ' ●' : '') + '</div>';
+  if (st.pending.length === 0) {
+    html += '<div class="log-empty">No pending transfers.</div>';
+  } else {
+    st.pending.forEach(function(p) {
+      html += '<div class="pending-item mono" style="font-size:0.78rem;">' + p.id + ': ' + p.from + ' → ' + p.to + ', ' + INR(p.amount) + '</div>';
+    });
+  }
+  html += '</div>';
+
+  // Ledger
+  html += '<div class="data-section">';
+  html += '<div class="data-label">Ledger Postings' + (changed.indexOf('LEDGER') !== -1 ? ' ●' : '') + '</div>';
+  if (st.ledger.length === 0) {
+    html += '<div class="log-empty">No postings yet.</div>';
+  } else {
+    st.ledger.forEach(function(p) {
+      html += '<div class="ledger-item mono" style="font-size:0.78rem;">';
+      html += p.ref + ': Debit ' + p.debit.account + ' ' + INR(p.debit.amount) + ' / Credit ' + p.credit.account + ' ' + INR(p.credit.amount);
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  // Audit Log
+  html += '<div class="data-section">';
+  html += '<div class="data-label">' + svgIcon('log') + ' Audit Log <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(append-only)</span></div>';
+  if (st.log.length === 0) {
+    html += '<div class="log-empty">No entries yet. Nothing has run.</div>';
+  } else {
+    html += '<div class="log-area">';
+    st.log.forEach(function(e) {
+      var cls = e.type === 'SECURITY_EVENT' ? ' security' : '';
+      html += '<div class="log-entry' + cls + '">';
+      html += '[' + e.time + '] ' + e.type + ' | ' + e.actor + ' | ' + e.tp + ' | ' + escHtml(e.detail);
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // IVP
+  html += '<div class="data-section">';
+  html += '<div class="data-label">' + svgIcon('ivp') + ' IVP — Ledger Balance Check</div>';
+  if (frame.ivpResult) {
+    var ivp = frame.ivpResult;
+    html += '<div class="ivp-result">';
+    html += '<div class="ivp-line"><span>Sum of balances</span><span class="ivp-status ' + (ivp.balanceOk ? 'pass' : 'fail') + '">' + INR(ivp.totalBalance) + ' / ' + INR(INVARIANT_TOTAL) + (ivp.balanceOk ? ' ✓' : ' ✗') + '</span></div>';
+    html += '<div class="ivp-line"><span>Debits = Credits</span><span class="ivp-status ' + (ivp.ledgerOk ? 'pass' : 'fail') + '">' + INR(ivp.totalDebits) + ' = ' + INR(ivp.totalCredits) + (ivp.ledgerOk ? ' ✓' : ' ✗') + '</span></div>';
+    html += '<div class="ivp-line"><span>Pending references</span><span class="ivp-status ' + (ivp.pendingOk ? 'pass' : 'fail') + '">' + (ivp.pendingOk ? 'Valid ✓' : 'Invalid ✗') + '</span></div>';
+    html += '</div>';
+  } else {
+    html += '<div class="ivp-result"><span class="ivp-status na">Not yet run.</span></div>';
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ── Rule Strip ──
+function buildRuleStrip() {
+  var el = document.getElementById('rule-strip');
+  var html = '';
+  RULES.forEach(function(r) {
+    html += '<button class="rule-strip-chip" data-rule="' + r.id + '" tabindex="0" aria-label="' + r.id + ': ' + escHtml(r.label) + '">';
+    html += r.id;
+    html += '<div class="rule-strip-tooltip">';
+    html += '<strong>' + r.id + ' — ' + escHtml(r.label) + '</strong>';
+    html += escHtml(r.plain);
+    html += '<div class="formal">' + escHtml(r.formal) + '</div>';
+    html += '</div>';
+    html += '</button>';
+  });
+  el.innerHTML = html;
+
+  // Clicking a chip opens the rules overlay
+  el.querySelectorAll('.rule-strip-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      openOverlay('rules');
+    });
+  });
+}
+
+function renderRuleStripState(frame) {
+  var chips = document.querySelectorAll('.rule-strip-chip');
+  // Collect all rule states from all frames up to current
+  var ruleStates = {};
+  for (var i = 0; i <= currentFrameIndex; i++) {
+    var f = currentFrames[i];
+    if (f.rulesTouched) {
+      f.rulesTouched.forEach(function(rt) {
+        // denied overrides pass overrides standing
+        if (rt.status === 'denied') ruleStates[rt.id] = 'denied';
+        else if (rt.status === 'pass' && ruleStates[rt.id] !== 'denied') ruleStates[rt.id] = 'pass';
+        else if (rt.status === 'standing' && !ruleStates[rt.id]) ruleStates[rt.id] = 'standing';
+      });
+    }
+  }
+
+  chips.forEach(function(chip) {
+    var rId = chip.getAttribute('data-rule');
+    chip.classList.remove('pass', 'denied', 'standing');
+    if (ruleStates[rId]) {
+      chip.classList.add(ruleStates[rId]);
+    }
+  });
+}
+
+// ── Presenter Panel ──
+function renderPresenter(frame) {
+  var panel = document.getElementById('presenter-panel');
+  if (!presenterOpen) {
+    panel.classList.remove('open');
+    return;
+  }
+  panel.classList.add('open');
+
+  var pn = frame.presenterNote || {};
+  var html = '';
+
+  // Timer
+  html += '<div class="presenter-timer">';
+  html += '<span id="presenter-time">0:00</span>';
+  html += '<span class="target">target 8:00</span>';
+  html += '</div>';
+
+  html += '<h3>Say</h3>';
+  html += '<p class="pres-content">' + escHtml(pn.say || '') + '</p>';
+
+  html += '<h3>Point at</h3>';
+  html += '<p class="pres-content">' + escHtml(pn.pointAt || '') + '</p>';
+
+  html += '<h3>Model term</h3>';
+  html += '<p class="pres-content mono" style="font-size:0.82rem;">' + escHtml(pn.modelTerm || '') + '</p>';
+
+  html += '<h3>Slide cue</h3>';
+  html += '<p class="pres-content">' + escHtml(pn.slideCue || '') + '</p>';
+
+  html += '<h3>If asked</h3>';
+  html += '<p class="pres-content">' + escHtml(pn.ifAsked || '') + '</p>';
+
+  html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--rule);">';
+  html += '<button class="small" id="btn-popout">Pop out notes</button>';
+  html += '</div>';
+
+  panel.innerHTML = html;
+
+  // Bind popout
+  document.getElementById('btn-popout').addEventListener('click', openPopout);
+
+  // Start timer
+  updatePresenterTimer();
+}
+
+function updatePresenterTimer() {
+  if (!presenterTimerStart) presenterTimerStart = Date.now();
+  var el = document.getElementById('presenter-time');
+  if (!el) return;
+  var elapsed = Math.floor((Date.now() - presenterTimerStart) / 1000);
+  var m = Math.floor(elapsed / 60);
+  var s = elapsed % 60;
+  el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function togglePresenter() {
+  presenterOpen = !presenterOpen;
+  if (presenterOpen && !presenterTimerStart) {
+    presenterTimerStart = Date.now();
+    if (presenterTimerInterval) clearInterval(presenterTimerInterval);
+    presenterTimerInterval = setInterval(updatePresenterTimer, 1000);
+  }
+  render();
+}
+
+function openPopout() {
+  try {
+    popoutWindow = window.open('', 'cw-notes', 'width=400,height=600');
+    if (!popoutWindow || popoutWindow.closed) {
+      throw new Error('blocked');
+    }
+    updatePopout(currentFrames[currentFrameIndex]);
+  } catch(e) {
+    var panel = document.getElementById('presenter-panel');
+    var msg = panel.querySelector('.popout-msg');
+    if (!msg) {
+      var div = document.createElement('div');
+      div.className = 'popout-msg';
+      div.style.cssText = 'font-size:0.78rem;color:var(--deny);margin-top:6px;';
+      div.textContent = 'Popup blocked by browser. Please allow popups for this page, or keep the docked panel.';
+      panel.appendChild(div);
+    }
+  }
+}
+
+function updatePopout(frame) {
+  if (!popoutWindow || popoutWindow.closed) return;
+  var pn = frame.presenterNote || {};
+  var elapsed = presenterTimerStart ? Math.floor((Date.now() - presenterTimerStart) / 1000) : 0;
+  var m = Math.floor(elapsed / 60);
+  var s = elapsed % 60;
+  var timeStr = m + ':' + (s < 10 ? '0' : '') + s;
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Presenter Notes</title>';
+  html += '<style>body{font-family:system-ui,sans-serif;font-size:14px;padding:20px;background:#FAFAF8;color:#1B1B18;line-height:1.5;}';
+  html += 'h3{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#5E5B53;margin-top:16px;margin-bottom:4px;}';
+  html += '.timer{font-family:monospace;font-size:1.3rem;margin-bottom:12px;} .target{color:#5E5B53;font-size:0.82rem;}</style></head><body>';
+  html += '<div class="timer">' + timeStr + ' <span class="target">target 8:00</span></div>';
+  html += '<h3>Say</h3><p>' + escHtml(pn.say || '') + '</p>';
+  html += '<h3>Point at</h3><p>' + escHtml(pn.pointAt || '') + '</p>';
+  html += '<h3>Model term</h3><p style="font-family:monospace;">' + escHtml(pn.modelTerm || '') + '</p>';
+  html += '<h3>Slide cue</h3><p>' + escHtml(pn.slideCue || '') + '</p>';
+  html += '<h3>If asked</h3><p>' + escHtml(pn.ifAsked || '') + '</p>';
+  html += '<hr style="border:none;border-top:1px solid #D9D5CA;margin-top:16px;">';
+  html += '<p style="font-size:12px;color:#5E5B53;">Step ' + (currentFrameIndex + 1) + ' of ' + currentFrames.length + ' · Scenario ' + currentScenario + '</p>';
+  html += '</body></html>';
+
+  popoutWindow.document.open();
+  popoutWindow.document.write(html);
+  popoutWindow.document.close();
+}
+
+// ── Glossary Overlay ──
+function buildGlossary() {
+  var el = document.getElementById('glossary-content');
+  var html = '';
+  GLOSSARY.forEach(function(g) {
+    html += '<div class="overlay-term">';
+    html += '<div class="overlay-rule-id">' + g.term + (g.full ? ' — ' + g.full : '') + '</div>';
+    html += '<div class="overlay-rule-plain">' + escHtml(g.plain) + '</div>';
+    html += '<div class="overlay-rule-formal" style="font-style:normal;">Bank example: ' + escHtml(g.example) + '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── Rules Overlay ──
+function buildRulesOverlay() {
+  var el = document.getElementById('rules-content');
+  var html = '';
+
+  html += '<div class="overlay-group-title">Certification Rules (checked by people)</div>';
+  RULES.filter(function(r) { return r.type === 'Certification'; }).forEach(function(r) {
+    html += '<div class="overlay-rule">';
+    html += '<span class="overlay-rule-id">' + r.id + '</span> ';
+    html += '<span class="overlay-rule-label">' + escHtml(r.label) + '</span>';
+    html += '<div class="overlay-rule-plain">' + escHtml(r.plain) + '</div>';
+    html += '<div class="overlay-rule-formal">' + escHtml(r.formal) + '</div>';
+    html += '</div>';
+  });
+
+  html += '<div class="overlay-group-title">Enforcement Rules (applied by the system)</div>';
+  RULES.filter(function(r) { return r.type === 'Enforcement'; }).forEach(function(r) {
+    html += '<div class="overlay-rule">';
+    html += '<span class="overlay-rule-id">' + r.id + '</span> ';
+    html += '<span class="overlay-rule-label">' + escHtml(r.label) + '</span>';
+    html += '<div class="overlay-rule-plain">' + escHtml(r.plain) + '</div>';
+    html += '<div class="overlay-rule-formal">' + escHtml(r.formal) + '</div>';
+    html += '</div>';
+  });
+
+  html += '<div class="overlay-note">';
+  html += 'The original paper splits rules into Certification (C1\u2013C5, checked by people such as a security officer) and Enforcement (E1\u2013E4, applied automatically by the system). Separation of duty is certified by C3 and enforced through the E2 relation list. E3 is user authentication. E4 protects the rules themselves from change. Some summaries pair E3 with separation of duty or E4 with input control; this demo follows the original paper.';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ── Overlays ──
+var currentOverlay = null;
+var previousFocusEl = null;
+
+function openOverlay(which) {
+  previousFocusEl = document.activeElement;
+  closeOverlay();
+  var el = document.getElementById('overlay-' + which);
+  if (el) {
+    el.classList.add('open');
+    currentOverlay = which;
+    // Focus the close button
+    var closeBtn = el.querySelector('.overlay-close');
+    if (closeBtn) closeBtn.focus();
+    // Trap focus
+    trapFocus(el);
+  }
+}
+
+function closeOverlay() {
+  if (currentOverlay) {
+    var el = document.getElementById('overlay-' + currentOverlay);
+    if (el) el.classList.remove('open');
+    currentOverlay = null;
+    if (previousFocusEl) previousFocusEl.focus();
+  }
+}
+
+function trapFocus(el) {
+  el.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      var focusable = el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+  });
+}
+
+
+// =============================================================================
+// 5. CONTROLS: keyboard, buttons, overlays
+// =============================================================================
+
+function bindControls() {
+  // Navigation buttons
+  document.getElementById('btn-next').addEventListener('click', nextStep);
+  document.getElementById('btn-back').addEventListener('click', prevStep);
+  document.getElementById('btn-reset').addEventListener('click', resetScenario);
+  document.getElementById('btn-presenter').addEventListener('click', togglePresenter);
+  document.getElementById('btn-glossary').addEventListener('click', function() { openOverlay('glossary'); });
+  document.getElementById('btn-rules').addEventListener('click', function() { openOverlay('rules'); });
+
+  // Scenario tabs
+  document.querySelectorAll('.scenbar-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var id = parseInt(tab.getAttribute('data-scenario'));
+      loadScenario(id);
+    });
+  });
+
+  // Overlay close buttons
+  document.querySelectorAll('.overlay-close').forEach(function(btn) {
+    btn.addEventListener('click', closeOverlay);
+  });
+
+  // Overlay backdrop click
+  document.querySelectorAll('.overlay-backdrop').forEach(function(bd) {
+    bd.addEventListener('click', function(e) {
+      if (e.target === bd) closeOverlay();
+    });
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', function(e) {
+    // Don't fire while typing in an input
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+    if (e.key === 'Escape') {
+      closeOverlay();
+      return;
+    }
+
+    if (currentOverlay) return; // Don't handle nav keys while overlay is open
+
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      nextStep();
+    } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+      e.preventDefault();
+      prevStep();
+    } else if (e.key === 'r' || e.key === 'R') {
+      resetScenario();
+    } else if (e.key >= '1' && e.key <= '5') {
+      loadScenario(parseInt(e.key));
+    } else if (e.key === 'p' || e.key === 'P') {
+      togglePresenter();
+    } else if (e.key === 'g' || e.key === 'G') {
+      openOverlay('glossary');
+    } else if (e.key === 'l' || e.key === 'L') {
+      openOverlay('rules');
+    } else if (e.key === '?') {
+      openOverlay('shortcuts');
+    }
+  });
+}
+
+function nextStep() {
+  if (currentFrameIndex < currentFrames.length - 1) {
+    currentFrameIndex++;
+    render();
+  } else {
+    // Next scenario or start again
+    if (currentScenario < 5) {
+      loadScenario(currentScenario + 1);
+    } else {
+      loadScenario(1);
+    }
+  }
+}
+
+function prevStep() {
+  if (currentFrameIndex > 0) {
+    currentFrameIndex--;
+    render();
+  }
+}
+
+function resetScenario() {
+  currentFrameIndex = 0;
+  denyNoteShown = {};
+  loadScenario(currentScenario);
+}
+
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function svgIcon(name, size) {
+  size = size || 20;
+  var s = size;
+  var sw = '1.5';
+  switch(name) {
+    case 'cdi':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round"><rect x="3" y="3" width="14" height="14" rx="1"/><line x1="6" y1="8" x2="14" y2="8"/><line x1="6" y1="12" x2="12" y2="12"/></svg>';
+    case 'udi':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round" stroke-dasharray="3 2"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>';
+    case 'tp':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round"><rect x="2" y="5" width="12" height="10" rx="3"/><polyline points="14,8 18,10 14,12"/></svg>';
+    case 'ivp':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><polyline points="7,10 9.5,12.5 13.5,7.5"/></svg>';
+    case 'user':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round"><circle cx="10" cy="7" r="3.5"/><path d="M3.5 17.5c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/></svg>';
+    case 'log':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round"><rect x="4" y="2" width="12" height="16" rx="1.5"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="9.5" x2="13" y2="9.5"/><line x1="7" y1="13" x2="11" y2="13"/><circle cx="14" cy="15" r="2.5" fill="currentColor" stroke="none" opacity="0.15"/><path d="M13 15l0.7 0.7 1.6-1.6" stroke-width="1.2"/></svg>';
+    case 'triple':
+      return '<svg class="legend-icon" width="'+s+'" height="'+s+'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round"><rect x="2" y="6" width="5" height="8" rx="1"/><rect x="8" y="6" width="5" height="8" rx="1"/><rect x="14" y="6" width="5" height="8" rx="1" stroke-dasharray="0"/></svg>';
+    default:
+      return '';
+  }
+}
+
+function checkIcon(status) {
+  if (status === 'pass' || status === 'info') {
+    return '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="var(--accent)" stroke-width="1.5"/><polyline points="6,9 8.5,11.5 12.5,6.5" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  if (status === 'fail') {
+    return '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="var(--deny)" stroke-width="1.5"/><line x1="6.5" y1="6.5" x2="11.5" y2="11.5" stroke="var(--deny)" stroke-width="1.5" stroke-linecap="round"/><line x1="11.5" y1="6.5" x2="6.5" y2="11.5" stroke="var(--deny)" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  }
+  if (status === 'skipped') {
+    return '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="var(--ink-2)" stroke-width="1.5" stroke-dasharray="3 2"/><line x1="6" y1="9" x2="12" y2="9" stroke="var(--ink-2)" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  }
+  return '';
+}
+
+
+// =============================================================================
+// SELF-TEST
+// =============================================================================
+
+function runSelfTest() {
+  var results = [];
+  var pass = true;
+
+  function assert(condition, msg) {
+    if (!condition) {
+      pass = false;
+      results.push('FAIL: ' + msg);
+      console.error('FAIL:', msg);
+    } else {
+      results.push('PASS: ' + msg);
+      console.log('PASS:', msg);
+    }
+  }
+
+  // Scenario 1 final state
+  var s1 = buildFrames(1, { amount: '5000' });
+  var lastS1 = null;
+  // Find last non-recap frame with state
+  for (var i = s1.length - 1; i >= 0; i--) {
+    if (s1[i].state && !s1[i].isRecap) { lastS1 = s1[i]; break; }
+  }
+  assert(lastS1.state.balances['ACC-1001'] === 45000, 'S1: ACC-1001 = 45000, got ' + lastS1.state.balances['ACC-1001']);
+  assert(lastS1.state.balances['ACC-1002'] === 25000, 'S1: ACC-1002 = 25000, got ' + lastS1.state.balances['ACC-1002']);
+  assert(lastS1.state.ledger.length === 1, 'S1: ledger has 1 posting, got ' + lastS1.state.ledger.length);
+  assert(lastS1.state.log.length === 2, 'S1: log has 2 entries, got ' + lastS1.state.log.length);
+  var ivp1 = runIVP(lastS1.state);
+  assert(ivp1.pass === true, 'S1: IVP passes');
+  assert(ivp1.totalBalance === 70000, 'S1: IVP total = 70000, got ' + ivp1.totalBalance);
+
+  // Scenario 2
+  var s2 = buildFrames(2, { writtenValue: '95000' });
+  var lastS2 = s2[s2.length - 1];
+  assert(lastS2.state.balances['ACC-1001'] === 50000, 'S2: ACC-1001 unchanged = 50000');
+  // Check E3 pass, E1 fail, E2 fail
+  var s2e3 = false, s2e1 = false, s2e2 = false, s2secLog = false;
+  s2.forEach(function(f) {
+    if (f.checks) f.checks.forEach(function(c) {
+      if (c.rule === 'E3' && c.status === 'pass') s2e3 = true;
+      if (c.rule === 'E1' && c.status === 'fail') s2e1 = true;
+      if (c.rule === 'E2' && c.status === 'fail') s2e2 = true;
+    });
+  });
+  assert(s2e3, 'S2: E3 pass');
+  assert(s2e1, 'S2: E1 fail');
+  assert(s2e2, 'S2: E2 fail');
+  var secEvents2 = lastS2.state.log.filter(function(e) { return e.type === 'SECURITY_EVENT'; });
+  assert(secEvents2.length === 1, 'S2: 1 SECURITY EVENT in log, got ' + secEvents2.length);
+
+  // Scenario 3
+  var s3 = buildFrames(3);
+  var s3e3 = false, s3e1 = false, s3e2 = false;
+  s3.forEach(function(f) {
+    if (f.checks) f.checks.forEach(function(c) {
+      if (c.rule === 'E3' && c.status === 'pass') s3e3 = true;
+      if (c.rule === 'E1' && c.status === 'pass') s3e1 = true;
+      if (c.rule === 'E2' && c.status === 'fail') s3e2 = true;
+    });
+  });
+  assert(s3e3, 'S3: E3 pass');
+  assert(s3e1, 'S3: E1 pass');
+  assert(s3e2, 'S3: E2 fail');
+
+  // Scenario 4
+  var s4 = buildFrames(4);
+  var s4e3 = false, s4e1 = false, s4e2 = false;
+  s4.forEach(function(f) {
+    if (f.checks) f.checks.forEach(function(c) {
+      if (c.rule === 'E3' && c.status === 'pass') s4e3 = true;
+      if (c.rule === 'E1' && c.status === 'pass') s4e1 = true;
+      if (c.rule === 'E2' && c.status === 'fail') s4e2 = true;
+    });
+  });
+  assert(s4e3, 'S4: E3 pass');
+  assert(s4e1, 'S4: E1 pass');
+  assert(s4e2, 'S4: E2 fail');
+
+  // Certification check
+  var certOrig = certifySeparationOfDuty(E2_RELATIONS);
+  assert(certOrig.pass === true, 'S4: original relations pass C3 certification');
+  var modRelations = deepClone(E2_RELATIONS);
+  modRelations.push({ user: 'asha', tp: 'TP2', cdis: ['ACC-1001', 'ACC-1002', 'LEDGER', 'PENDING'] });
+  var certMod = certifySeparationOfDuty(modRelations);
+  assert(certMod.pass === false, 'S4: modified relations fail C3 certification');
+  assert(certMod.violations.length === 1, 'S4: one violation');
+  assert(certMod.violations[0].user === 'asha', 'S4: violation is Asha');
+  assert(certMod.violations[0].tps.indexOf('TP1') !== -1 && certMod.violations[0].tps.indexOf('TP2') !== -1, 'S4: Asha holds TP1 and TP2');
+
+  // Scenario 5: bad inputs
+  var badInputs = [
+    { params: { amount: '-5000', from: 'ACC-1001', to: 'ACC-1002' }, shouldFail: true, label: 'S5: negative' },
+    { params: { amount: 'five thousand', from: 'ACC-1001', to: 'ACC-1002' }, shouldFail: true, label: 'S5: text' },
+    { params: { amount: '5000', from: 'ACC-1001', to: 'ACC-1001' }, shouldFail: true, label: 'S5: same account' },
+    { params: { amount: '999999', from: 'ACC-1001', to: 'ACC-1002' }, shouldFail: true, label: 'S5: over limit' },
+    { params: { amount: '5000', from: 'ACC-1001', to: 'ACC-1002' }, shouldFail: false, label: 'S5: valid 5000' }
+  ];
+  badInputs.forEach(function(bi) {
+    var frames5 = buildFrames(5, bi.params);
+    var foundC5fail = false, foundC5pass = false;
+    frames5.forEach(function(f) {
+      if (f.checks) f.checks.forEach(function(c) {
+        if (c.rule === 'C5' && c.status === 'fail') foundC5fail = true;
+        if (c.rule === 'C5' && c.status === 'pass') foundC5pass = true;
+      });
+    });
+    if (bi.shouldFail) {
+      assert(foundC5fail, bi.label + ': C5 fails');
+    } else {
+      assert(foundC5pass, bi.label + ': C5 passes');
+    }
+  });
+
+  // Different C5 failure reasons
+  var reasons = {};
+  badInputs.filter(function(bi) { return bi.shouldFail; }).forEach(function(bi) {
+    var frames5 = buildFrames(5, bi.params);
+    frames5.forEach(function(f) {
+      if (f.checks) f.checks.forEach(function(c) {
+        if (c.rule === 'C5' && c.status === 'fail') {
+          reasons[bi.label] = c.detail;
+        }
+      });
+    });
+  });
+  var reasonValues = Object.keys(reasons).map(function(k) { return reasons[k]; });
+  var uniqueReasons = reasonValues.filter(function(v, i, a) { return a.indexOf(v) === i; });
+  assert(uniqueReasons.length === 4, 'S5: 4 different C5 failure reasons, got ' + uniqueReasons.length);
+
+  // appendLog never reduces length
+  var testState = makeState();
+  var len0 = testState.log.length;
+  appendLog(testState, { time: '09:00:00', type: 'TEST', actor: 'test', tp: 'test', detail: 'test' });
+  assert(testState.log.length > len0, 'appendLog increases length');
+  var len1 = testState.log.length;
+  appendLog(testState, { time: '09:00:01', type: 'TEST', actor: 'test', tp: 'test', detail: 'test2' });
+  assert(testState.log.length > len1, 'appendLog never reduces length');
+
+  // Determinism: Back then Next produces identical frames
+  var framesA = buildFrames(1, { amount: '5000' });
+  var framesB = buildFrames(1, { amount: '5000' });
+  var deterministic = true;
+  for (var i = 0; i < framesA.length; i++) {
+    if (JSON.stringify(framesA[i]) !== JSON.stringify(framesB[i])) {
+      deterministic = false;
+      break;
+    }
+  }
+  assert(deterministic, 'Determinism: rebuilding frames produces identical result');
+
+  // Show banner
+  var banner = document.createElement('div');
+  banner.className = 'selftest-banner ' + (pass ? 'pass' : 'fail');
+  banner.textContent = pass
+    ? 'SELF-TEST: ALL PASSED (' + results.filter(function(r){return r.startsWith('PASS');}).length + ' assertions)'
+    : 'SELF-TEST: FAILED — see console';
+  document.body.prepend(banner);
+
+  console.log('=== Self-test results ===');
+  results.forEach(function(r) { console.log(r); });
+
+  return pass;
+}
+
+
+// =============================================================================
+// INIT
+// =============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+  init();
+  if (location.hash === '#selftest') {
+    runSelfTest();
+  }
+});
+
+</script>
+</body>
+</html>
